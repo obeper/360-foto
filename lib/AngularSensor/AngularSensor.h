@@ -2,7 +2,6 @@
 #define AngularSensor_h
 
 #include "Arduino.h"
-#include "MemoryStorage.h"
 
 class AngularSensor
 {
