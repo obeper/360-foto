@@ -21,7 +21,7 @@
 #include <canoneos.h>
 
 
-//CAMERA CONTROLL
+//CAMERA CONTROLL NEW
 class CamStateHandlers : public PTPStateHandlers
 {
       bool stateConnected;
@@ -56,7 +56,6 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
 //Config 
 AngularSensor sensorPanorering(0);
 AngularSensor sensorTilt(1);
-
 
 StepperControl motorPanorering(11,12);
 StepperControl motorTilt(13,14);
