@@ -9,11 +9,11 @@ class BatterySensor
   public:
   	//CONSTRUCT
     BatterySensor(int analogReadPin);
+    int readPercentage();
   private:
    int      _analogReadPin;
    float    _minVoltage;
-   float    _maxValtage;
-   float    _currentVoltage;  
+   float    _maxVoltage;
 };
 
 
