@@ -60,7 +60,9 @@ AngularSensor sensorTilt(1);
 StepperControl motorPanorering(11,12);
 StepperControl motorTilt(13,14);
 
+int isThisTheShit(){
 
+}
 
 void setup() 
 {
