@@ -13,24 +13,17 @@ BatterySensor battery(8);
 
 void setup() {
 	Serial2.begin(115200);
-	pinMode(7,OUTPUT);
 }
 
 void loop() {
 	
 
 	if(Serial2.available()){
-		char val = Serial2.read();
-		if(val = 'S'){
-			digitalWrite(7,HIGH);
-		}
-		delay(1500);
-		digitalWrite(7,LOW);
+		int batPercenage = battery.readPercentage();
+		display.pauseScreen(12,13,batPercenage,213);
+		delay(2000);
 	}
-	int batPercenage = battery.readPercentage();
-
-	display.pauseScreen(12,13,batPercenage,213);
-	delay(2000);
+	
 	
   
 }
