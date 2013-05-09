@@ -1,7 +1,10 @@
-#include "BatterySensor.h"
+#include "Arduino.h"
+#include "RotateCamera.h"
 
 
-BatterySensor bat1(2);
+//int tiltReadAnalogPin, int tiltStepperDirPin, int tiltStepperStepPin,
+//int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin
+RotateCamera camera(2, 3, 4, 6, 7, 8);
 
 void setup() {
   
@@ -9,6 +12,7 @@ void setup() {
 
 void loop() {
 
-	Serial.print(bat1.readPercentage());
+	camera.move(30,20);
+	delay(5000);
   
 }
