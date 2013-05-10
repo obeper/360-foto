@@ -8,7 +8,7 @@ MainDisplay::MainDisplay(int rs, int enable,int d4, int d5, int d6, int d7) :
 LiquidCrystal(rs, enable, d4, d5, d6, d7)
 {
 	//No state
-	_currentState = BLANK;
+	//_currentState = BLANK;
 	_width = 16;
 	_height = 2; 
 	this->begin(_width, _height);
@@ -23,7 +23,7 @@ void MainDisplay::onScreen(){
 	
 	this->clear();
 	this->printCenterUp("GLOBETROTTER");
-	_currentState = ON;
+	//_currentState = ON;
 	
 	
 }
@@ -31,7 +31,7 @@ void MainDisplay::readyScreen(int batteryStatus){
 		this->clear();
 		this->printLeftUp("Ready");
 		this->printRigthUp((String)batteryStatus + "%");
-		_currentState = READY;
+		//_currentState = READY;
 
 }
 void MainDisplay::receivingDataScreen(){
@@ -39,7 +39,7 @@ void MainDisplay::receivingDataScreen(){
 		this->clear();
 		this->printCenterUp("GLOBETROTTER");
 		this->printCenterDown("Receiving data");
-		_currentState = RECEIVINGDATA;
+		//_currentState = RECEIVINGDATA;
 
 }
 void MainDisplay::startScreen(int timeToStart){
@@ -51,7 +51,7 @@ void MainDisplay::startScreen(int timeToStart){
 		this->setCursor((int)((_width -  t.length()) / 2 +1), 0);
 		this->print(t);
 	}
-	_currentState = START;
+	//_currentState = START;
 }
 void MainDisplay::runningScreen(int picture, int lastPicture, int batteryStatus, int timeLeft){
 
@@ -61,7 +61,7 @@ void MainDisplay::runningScreen(int picture, int lastPicture, int batteryStatus,
 
 	this->printRigthUp((String)batteryStatus+"%");
 	this->printRigthDown((String)timeLeft+"s");
-	_currentState = RUNNING;
+	//_currentState = RUNNING;
 	
 }
 void MainDisplay::pauseScreen(int picture, int lastPicture, int batteryStatus, int timeLeft){
@@ -72,7 +72,7 @@ void MainDisplay::pauseScreen(int picture, int lastPicture, int batteryStatus, i
 
 	this->printRigthUp((String)batteryStatus+"%");
 	this->printRigthDown((String)timeLeft+"s");
-	_currentState = RUNNING;
+	//_currentState = RUNNING;
 	
 }
 void MainDisplay::doneScreen(int picture, int lastPicture, int batteryStatus, int timeLeft){
@@ -83,7 +83,7 @@ void MainDisplay::doneScreen(int picture, int lastPicture, int batteryStatus, in
 
 	this->printRigthUp((String)batteryStatus+"%");
 	this->printRigthDown((String)timeLeft+"s");
-	_currentState = RUNNING;
+	//_currentState = RUNNING;
 	
 }
 void MainDisplay::resettingScreen(){
@@ -100,7 +100,7 @@ void MainDisplay::resumeScreen(int timeToResume){
 		this->setCursor((int)((_width -  t.length()) / 2 +1), 0);
 		this->print(t);
 	}
-	_currentState = START;
+	//_currentState = START;
 }
 //PRIVATE
 void MainDisplay::printCenterUp(String wordToPrint){

@@ -5,7 +5,7 @@
 #include "Arduino.h"
 #include "LiquidCrystal.h"
 
-enum displayState { BLANK, ON, READY, RECEIVINGDATA, START, RUNNING, PAUSE, RESUME, RESET, DONE  };
+//enum displayState { BLANK, ON, READY, RECEIVINGDATA, START, RUNNING, PAUSE, RESUME, RESET, DONE  };
 
 class MainDisplay : public LiquidCrystal
 {
@@ -26,7 +26,7 @@ class MainDisplay : public LiquidCrystal
 
 
   private:
-    displayState 	_currentState;
+    //displayState 	_currentState;
     int 			_width;
     int 			_height;
 
