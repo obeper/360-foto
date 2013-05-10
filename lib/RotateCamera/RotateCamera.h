@@ -21,6 +21,8 @@ class RotateCamera
 				_gearRatio = 50;
 			}
 		
+
+		
 		void move(float panCordinate, float tiltCordinate);
 	private:
 		AngularSensor 		_sensorTilt;
