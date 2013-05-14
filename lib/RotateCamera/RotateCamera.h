@@ -2,7 +2,7 @@
 #define RotateCamera_h
 
 #include "Arduino.h"
-#include "StepperControl.h"
+#include "AccelStepper.h"
 #include "AngularSensor.h"
 
 class RotateCamera
@@ -13,12 +13,16 @@ class RotateCamera
 					 int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin): 
 			_sensorTilt(tiltReadAnalogPin), 
 			_sensorPan(panReadAnalogPin),
-			_stepperTilt(tiltStepperDirPin,tiltStepperStepPin),
-			_stepperPan(panStepperStepPin, panStepperStepPin){
+			_stepperTilt(1,tiltStepperStepPin,tiltStepperDirPin),
+			_stepperPan(1,panStepperStepPin, panStepperDirPin){
 				//BASE SPEED FOR STEPPERMOTORS
-				_speed = 0.1;
+				_speed = 5q000;
 				//GEAR RATIO BETWEEN MOTOR AND CAMERA MOVEMENT
 				_gearRatio = 50;
+
+				_stepperTilt.setMaxSpeed(6000);
+				_stepperPan.setMaxSpeed(6000);
+				
 			}
 		
 
@@ -28,14 +32,15 @@ class RotateCamera
 		AngularSensor 		_sensorTilt;
 		AngularSensor 		_sensorPan;
 
-		StepperControl 		_stepperTilt;
-		StepperControl 		_stepperPan;
+		AccelStepper 		_stepperTilt;
+		AccelStepper 		_stepperPan;
 
 		float 				_speed;
 		int					_gearRatio;
 
 		void pan(float cordinate);
 		void tilt(float cordinate);
+		float calcSteppsToMove(float degs);
 };
 
 #endif

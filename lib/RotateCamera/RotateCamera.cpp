@@ -2,24 +2,37 @@
 
 //Public
 void RotateCamera::move(float panCordinate, float tiltCordinate){
+
 	this->tilt(tiltCordinate);
 	this->pan(panCordinate);
-	
+	_stepperTilt.runSpeedToPosition();
+	_stepperPan.runSpeedToPosition();
+
+
 }
 
 //Private
 void RotateCamera::pan(float cordinate){
 	//Calc degs to move
-	float currentCordinate = 10.0;//(float)_sensorPan.readDeg();
+	float currentCordinate = (float)_sensorPan.readDeg();
 	float degsToMove = cordinate - currentCordinate;
+	
 	//Move camera
-	_stepperPan.run(degsToMove * _gearRatio, _speed);
+	float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
+	_stepperPan.move(steppsToMove);
+	_stepperPan.setSpeed(_speed);
 }
 
 void RotateCamera::tilt(float cordinate){
 	//Calc degs to move
-	float currentCordinate = 50; //(float)_sensorTilt.readDeg();
+	float currentCordinate = (float)_sensorTilt.readDeg();
 	float degsToMove = cordinate - currentCordinate;
 	//Move camera
-	_stepperTilt.run(degsToMove * _gearRatio, _speed);
+	float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
+	_stepperTilt.move(steppsToMove);
+	_stepperTilt.setSpeed(_speed);
+}
+
+float RotateCamera::calcSteppsToMove(float degs){
+	return 1600.0/360.0 * degs;
 }

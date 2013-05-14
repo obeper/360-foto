@@ -14,6 +14,7 @@
 #include <ptp.h>
 #include <canoneos.h>
 
+#include "AccelStepper.h"
 
 #include "Arduino.h"
 #include "RotateCamera.h"
@@ -69,64 +70,27 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
 
 //int tiltReadAnalogPin, int tiltStepperDirPin, int tiltStepperStepPin,
 //int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin
-RotateCamera camera(2, 26, 9, 0, 25, 10);
+//RotateCamera camera(2, 26, 9, 0, 25, 10);
+RotateCamera camera(0, 25, 10, 2, 26, 9);
 //int rs, int enable,int d4, int d5, int d6, int d7)
 MainDisplay display(22,13,12,23,11,24);
 
 BatterySensor battery(8);
 
-bool readyForStart;
+enum ProgramState {READY, }
 
 
-int startButtonPin = 2;
-void setup() {
+void setup()
+{ 
 
-    //BEGIN BLUETOOTH
-    //Serial2.begin(115200);
-    Serial.begin(115200);
-    display.onScreen();
-    delay(3000);
-
-    Serial.println("Start");
-
-    if (Usb.Init() == -1)
-        Serial.println("OSC did not start.");
-
-    readyForStart = true;
-
-    //
-    pinMode(startButtonPin,INPUT);  
 }
-
-void loop() {
-
-
-
-
-
-    if(readyForStart){
-        display.readyScreen(battery.readPercentage());
-        readyForStart = false;
+void loop()
+{
+    camera.move(180,30);
+    if(!screenOn){
+        display.onScreen();
+        screenOn = true;
     }
-
-    if(digitalRead(startButtonPin) == HIGH){
-
-        //START
-        int timeToStart = 5;
-        for (int i = timeToStart; i > 0; --i)
-        {
-            display.startScreen(i);
-            delay(1000);
-        }
-        display.runningScreen(2,5,battery.readPercentage(),200);
-        camera.move(30,30);
-        pictureIsTaken = false; 
-        while(!pictureIsTaken){
-            Usb.Task();
-        }
-        
-
-    }
-
     
+
 }
