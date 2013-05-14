@@ -16,7 +16,7 @@ class RotateCamera
 			_stepperTilt(1,tiltStepperStepPin,tiltStepperDirPin),
 			_stepperPan(1,panStepperStepPin, panStepperDirPin){
 				//BASE SPEED FOR STEPPERMOTORS
-				_speed = 5q000;
+				_speed = 5000;
 				//GEAR RATIO BETWEEN MOTOR AND CAMERA MOVEMENT
 				_gearRatio = 50;
 
