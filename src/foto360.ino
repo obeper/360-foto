@@ -23,8 +23,8 @@
 #include "BatterySensor.h"
 
 
-enum ProgramState {PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_ABORTED};
-enum ProgramEvent {EVT_NOTHING, EVT_START_IS_PRESSED, EVT_BLUETOOTH_IS_ACTIVE};
+enum ProgramState {PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET};
+enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_BLUETOOTH_IS_ACTIVE};
 
 class CamStateHandlers : public PTPStateHandlers
 {
@@ -85,6 +85,8 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
 #define STARTING_DELAY_TIMER    6           // SEC
 #define RESUME_DELAY_TIMER      6           // SEC
 #define BUTTON_DELAY_TIMER      1500        // mSEC
+#define RESET_DELAY_TIMER       5000        // mSEC
+#define BUTTON_DELAY_TO_RESET   3000        // mSEC
 //int tiltReadAnalogPin, int tiltStepperDirPin, int tiltStepperStepPin,
 //int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin
 
@@ -98,12 +100,16 @@ BatterySensor battery(8);
 
 ProgramState currentState;
 
-int analogStartButtonPin = 1;
+int startButtonPin;
 //Mainfunktion globals
 int batteryPercentage;
 unsigned long lastBatteryReadTime; 
 unsigned long lastTimeToStartTime;
 unsigned long lastTimeButtonWasPressed;
+unsigned long lastTimeToResetTime;
+
+unsigned long buttonPressedTime;
+bool wasHigh;
 
 int timeToStartSec;
 int currentPictureNr;
@@ -122,11 +128,18 @@ void setup()
 
     currentState = PGM_READY;
 
+    startButtonPin = 2;
+    pinMode(startButtonPin, INPUT);
+
     batteryPercentage = battery.readPercentage();
     lastBatteryReadTime = timeNow;
     lastTimeToStartTime = timeNow;
     lastTimeButtonWasPressed = timeNow;
+    lastTimeToResetTime = timeNow;
     lastDebugTime = timeNow;
+    
+    buttonPressedTime = 0;
+    wasHigh = false;
 
     timeToStartSec = STARTING_DELAY_TIMER;
     currentPictureNr = 0;
@@ -166,7 +179,7 @@ void loop()
         case PGM_READY:
             display.readyScreen(batteryPercentage);
             //CHECK START/STOP BUTTON PRESS
-            if(analogRead(analogStartButtonPin) > 1000){
+            if(digitalRead(startButtonPin) == HIGH){
                 currentState = PGM_STARTED;
             }
             break;
@@ -191,7 +204,7 @@ void loop()
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
         case PGM_RUNNING:
-            if(analogRead(analogStartButtonPin) > 1000 && currentTime > (lastTimeButtonWasPressed + BUTTON_DELAY_TIMER )){
+            if(digitalRead(startButtonPin) == HIGH && currentTime > (lastTimeButtonWasPressed + BUTTON_DELAY_TIMER )){
                 currentState = PGM_PAUSED;
                 lastTimeButtonWasPressed = currentTime;
             }
@@ -200,10 +213,33 @@ void loop()
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
         case PGM_PAUSED:
-            if(analogRead(analogStartButtonPin) > 1000 && currentTime > (lastTimeButtonWasPressed + BUTTON_DELAY_TIMER )){
-                currentState = PGM_RESUMED;
+            if(digitalRead(startButtonPin) == HIGH && currentTime > (lastTimeButtonWasPressed + BUTTON_DELAY_TIMER )){
+                if(!wasHigh){
+                    buttonPressedTime = currentTime;     
+                }
+                wasHigh = true;
+
+            }
+            if(digitalRead(startButtonPin) == LOW && wasHigh){
+                buttonPressedTime = currentTime - buttonPressedTime;
+                if (buttonPressedTime < BUTTON_DELAY_TO_RESET)
+                {
+                    currentState = PGM_RESUMED;
+                    
+                }else if(buttonPressedTime > BUTTON_DELAY_TO_RESET){
+                    currentState = PGM_RESET;
+                    lastTimeToResetTime = currentTime;
+                }
+                wasHigh = false;
                 lastTimeButtonWasPressed = currentTime;
             }
+            if(digitalRead(startButtonPin) == HIGH && wasHigh && currentTime > ( buttonPressedTime +BUTTON_DELAY_TO_RESET) ){
+                currentState PGM_RESET;
+                lastTimeToResetTime = currentTime;
+                wasHigh = false;
+                lastTimeButtonWasPressed = currentTime;
+            }
+
             display.pauseScreen(7,24,batteryPercentage,500);
             break;
 ////////////////////////////////////////////////////////////
@@ -219,6 +255,15 @@ void loop()
                     currentState = PGM_RUNNING;
                     lastTimeToStartTime = 0;
                 }
+            }
+            break;
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+        case PGM_RESET:
+            display.resettingScreen();
+            //NOLLSTÄLLA ALLT
+            if(currentTime > lastTimeToResetTime + RESET_DELAY_TIMER ){
+                currentState = PGM_READY;
             }
             break;
 ////////////////////////////////////////////////////////////
