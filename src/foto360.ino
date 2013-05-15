@@ -23,7 +23,7 @@
 #include "BatterySensor.h"
 
 
-enum ProgramState {PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET};
+enum ProgramState {PGM_SETUP, PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET};
 enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_BLUETOOTH_IS_ACTIVE};
 
 class CamStateHandlers : public PTPStateHandlers
@@ -81,7 +81,8 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
 
 //DEFINE MAIN OBJECTS AND CONSTANTS
 
-#define BATTERY_READ_INTERVAL   60000       // mSEC
+#define BATTERY_READ_INTERVAL   5000       // mSEC
+#define BATTERY_UPDATE_INTERVAL 20000       // mSEC
 #define STARTING_DELAY_TIMER    6           // SEC
 #define RESUME_DELAY_TIMER      6           // SEC
 #define BUTTON_DELAY_TIMER      1500        // mSEC
@@ -97,13 +98,13 @@ RotateCamera camera(0, 25, 10, 2, 26, 9);
 MainDisplay display(22,13,12,23,11,24);
 
 BatterySensor battery(8);
-
 ProgramState currentState;
 
 int startButtonPin;
 //Mainfunktion globals
 int batteryPercentage;
 unsigned long lastBatteryReadTime; 
+unsigned long lastBatteryUpdateTime; 
 unsigned long lastTimeToStartTime;
 unsigned long lastTimeButtonWasPressed;
 unsigned long lastTimeToResetTime;
@@ -131,12 +132,12 @@ void setup()
     startButtonPin = 2;
     pinMode(startButtonPin, INPUT);
 
-    batteryPercentage = battery.readPercentage();
     lastBatteryReadTime = timeNow;
     lastTimeToStartTime = timeNow;
     lastTimeButtonWasPressed = timeNow;
     lastTimeToResetTime = timeNow;
     lastDebugTime = timeNow;
+    lastBatteryUpdateTime = timeNow;
     
     buttonPressedTime = 0;
     wasHigh = false;
@@ -147,7 +148,15 @@ void setup()
 
     display.setRefreshRate(800);
     
-    delay(2000);
+    delay(1400);
+
+    battery.readVoltage();
+    delay(200);
+    battery.readVoltage();
+    delay(200);
+    battery.readVoltage();
+    delay(200);
+    batteryPercentage = battery.readPercentage();
 }
 void loop()
 {
@@ -163,17 +172,27 @@ void loop()
 
 
 
-    //READ BATTERY ONCE EVERY 60 SEC (To avoid small fluctuations)
+    //READ BATTERY ONCE EVERY 5 SEC 
     if(currentTime > (lastBatteryReadTime + BATTERY_READ_INTERVAL)){
-        batteryPercentage = battery.readPercentage();
+       battery.readVoltage();
         lastBatteryReadTime = currentTime;
     }
+    //READ BATTERY ONCE EVERY 5 SEC 
+    if(currentTime > (lastBatteryUpdateTime + BATTERY_UPDATE_INTERVAL)){
+       batteryPercentage = battery.readPercentage();
+        lastBatteryUpdateTime = currentTime;
+    }
+
 
     //CHECK BLUETOOTH
         //TODO !!!
 
     switch(currentState){
-
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+        case PGM_SETUP:
+            
+            break;
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
         case PGM_READY:
@@ -226,14 +245,11 @@ void loop()
                 {
                     currentState = PGM_RESUMED;
                     
-                }else if(buttonPressedTime > BUTTON_DELAY_TO_RESET){
-                    currentState = PGM_RESET;
-                    lastTimeToResetTime = currentTime;
                 }
                 wasHigh = false;
                 lastTimeButtonWasPressed = currentTime;
             }
-            if(digitalRead(startButtonPin) == HIGH && wasHigh && currentTime > ( buttonPressedTime +BUTTON_DELAY_TO_RESET) ){
+            if(digitalRead(startButtonPin) == HIGH && wasHigh && currentTime > ( buttonPressedTime + BUTTON_DELAY_TO_RESET) ){
                 currentState = PGM_RESET;
                 lastTimeToResetTime = currentTime;
                 wasHigh = false;
