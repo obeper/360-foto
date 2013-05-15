@@ -234,7 +234,7 @@ void loop()
                 lastTimeButtonWasPressed = currentTime;
             }
             if(digitalRead(startButtonPin) == HIGH && wasHigh && currentTime > ( buttonPressedTime +BUTTON_DELAY_TO_RESET) ){
-                currentState PGM_RESET;
+                currentState = PGM_RESET;
                 lastTimeToResetTime = currentTime;
                 wasHigh = false;
                 lastTimeButtonWasPressed = currentTime;
