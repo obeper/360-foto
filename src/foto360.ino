@@ -24,7 +24,72 @@
 #include "PanoramaSettings.h"
 
 enum ProgramState {PGM_SETUP, PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET};
-enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_BLUETOOTH_IS_ACTIVE};
+enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_BLUETOOTH_IS_ACTIVE, EVT_LAST_PICTURE_IS_TAKEN};
+
+//////////////////////////////////////////////
+////////////////////MAINPROGRAM///////////////
+//////////////////////////////////////////////
+
+//DEFINE MAIN OBJECTS AND CONSTANTS
+
+#define BATTERY_READ_INTERVAL   5000       // mSEC
+#define BATTERY_UPDATE_INTERVAL 20000       // mSEC
+#define STARTING_DELAY_TIMER    6           // SEC
+#define RESUME_DELAY_TIMER      6           // SEC
+#define BUTTON_DELAY_TIMER      1500        // mSEC
+#define RESET_DELAY_TIMER       5000        // mSEC
+#define BUTTON_DELAY_TO_RESET   3000        // mSEC
+
+
+
+//int tiltReadAnalogPin, int tiltStepperDirPin, int tiltStepperStepPin,
+//int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin
+RotateCamera camera(0, 25, 10, 2, 26, 9);
+
+//int rs, int enable,int d4, int d5, int d6, int d7)
+MainDisplay display(22,13,12,23,11,24);
+
+BatterySensor battery(8);
+
+//Camera 15.0 brännvidd, sensorH 22.3, sensorV 14.3, overlap 1.2
+PanoramaSettings panoramaSettings(15.0, 22.3, 14.9, 1.2);
+ProgramState currentState;
+
+int startButtonPin;
+
+
+int batteryPercentage;
+unsigned long lastBatteryReadTime; 
+unsigned long lastBatteryUpdateTime; 
+unsigned long lastTimeToStartTime;
+unsigned long lastTimeButtonWasPressed;
+unsigned long lastTimeToResetTime;
+unsigned long lastTimeTimeLeftWasUpdated;
+
+unsigned long buttonPressedTime;
+bool wasHigh;
+
+int timeToStartSec;
+
+unsigned long currentTime;
+
+
+//DEBUG
+unsigned long lastDebugTime;
+
+
+//FOTOPROCESS VARIABLES
+int currentPictureNr;
+int lastPictureNr;
+int timeLeftOfProcess;
+int pictureNrInCurrentHDR;
+int evValue;
+int shutterSpeedValue;
+
+bool cameraPhotoIsTaken;
+bool cameraPropertyChanged;
+ProcessEvent currentProcessEvent;
+
 
 class CamStateHandlers : public PTPStateHandlers
 {
@@ -53,80 +118,39 @@ void CamStateHandlers::OnDeviceDisconnectedState(PTP *ptp)
 
 void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
 {
-    static uint32_t next_time = 0;
+    static unsigned long next_time = 0;
     
     if (!stateConnected)
         stateConnected = true;
 
-    uint32_t  time_now = millis();
+    unsigned long  time_now = millis();
 
     if (time_now > next_time)
     {
-        next_time = time_now + 3000;
+        next_time = time_now + 200;
         
-        uint16_t rc = Eos.Capture();
-        pictureIsTaken = true;
+        if(currentProcessEvent == EVT_TAKE_PHOTO && !cameraPhotoIsTaken){
+             uint16_t rc = Eos.Capture();
+             if (rc == PTP_RC_OK){
+                cameraPhotoIsTaken = true;
+             }
+            
+        }else if(currentProcessEvent == EVT_CHANGE_CAMERA_PROPERTY && !cameraPropertyChanged){
+            uint16_t rc2 = Eos.SetProperty(EOS_DPC_ShutterSpeed, shutterSpeedValue);
+            if(rc2 == PTP_RC_OK){
+                cameraPropertyChanged = true;
+            }
+        }
+       
     
-        if (rc != PTP_RC_OK)
-            ErrorMessage<uint16_t>("Error", rc);
+        
     }
 }
 
 
 
 
-//////////////////////////////////////////////
-////////////////////MAINPROGRAM///////////////
-//////////////////////////////////////////////
 
-//DEFINE MAIN OBJECTS AND CONSTANTS
-
-#define BATTERY_READ_INTERVAL   5000       // mSEC
-#define BATTERY_UPDATE_INTERVAL 20000       // mSEC
-#define STARTING_DELAY_TIMER    6           // SEC
-#define RESUME_DELAY_TIMER      6           // SEC
-#define BUTTON_DELAY_TIMER      1500        // mSEC
-#define RESET_DELAY_TIMER       5000        // mSEC
-#define BUTTON_DELAY_TO_RESET   3000        // mSEC
-
-
-
-//int tiltReadAnalogPin, int tiltStepperDirPin, int tiltStepperStepPin,
-//int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin
-RotateCamera camera(0, 25, 10, 2, 26, 9);
-
-//int rs, int enable,int d4, int d5, int d6, int d7)
-MainDisplay display(22,13,12,23,11,24);
-
-BatterySensor battery(8);
-
-ProgramState currentState;
-
-int startButtonPin;
-
-
-int batteryPercentage;
-unsigned long lastBatteryReadTime; 
-unsigned long lastBatteryUpdateTime; 
-unsigned long lastTimeToStartTime;
-unsigned long lastTimeButtonWasPressed;
-unsigned long lastTimeToResetTime;
-unsigned long lastTimeTimeLeftWasUpdated;
-
-unsigned long buttonPressedTime;
-bool wasHigh;
-
-int timeToStartSec;
-
-unsigned long currentTime;
-
-//FOTOPROCESS VARIABLES
-int currentPictureNr;
-int lastPictureNr;
-int timeLeftOfProcess;
-ProcessEvent currentProcessEvent;
-//DEBUG
-unsigned long lastDebugTime;
 
 void setup()
 {
@@ -177,30 +201,32 @@ void loop()
 
 
     if(currentTime > (1000 + lastDebugTime)){
-         Serial.println(currentState);
-         lastDebugTime = currentTime;
+
+        Serial.println("--------------");
+        Serial.println("Current State:");
+        Serial.println(currentState);
+        Serial.println("Process State");
+        Serial.println(currentProcessEvent);
+        Serial.println("ShutterSpeed:");
+        Serial.println(shutterSpeedValue);
+        lastDebugTime = currentTime;
     }
 
 
 
-    //READ BATTERY ONCE EVERY 5 SEC 
+    //READ BATTERY ONCE EVERY 5 SEC TO GET MEAN VALUE 
     if(currentTime > (lastBatteryReadTime + BATTERY_READ_INTERVAL)){
        battery.readVoltage();
         lastBatteryReadTime = currentTime;
     }
-    //READ BATTERY ONCE EVERY 5 SEC 
+    //UPDATE BATTERY ONCE EVERY 5 SEC 
     if(currentTime > (lastBatteryUpdateTime + BATTERY_UPDATE_INTERVAL)){
        batteryPercentage = battery.readPercentage();
         lastBatteryUpdateTime = currentTime;
     }
 
 
-    //CHECK BLUETOOTH
-    if(currentState == PGM_READY){
-        if(Serial2.available()){
-            //TO FUNKY SHIT WITH BLUETOOTH
-        }
-    }
+    
 
     switch(currentState){
 ////////////////////////////////////////////////////////////
@@ -210,6 +236,10 @@ void loop()
             lastPictureNr = 0;
             timeLeftOfProcess = 4000;
             currentProcessEvent = EVT_NEW;
+            shutterSpeedValue = 27;
+            evValue = 1;
+            cameraPropertyChanged = false;
+            cameraPhotoIsTaken = false;
 
             currentState = PGM_READY;
             break;
@@ -217,6 +247,10 @@ void loop()
 ////////////////////////////////////////////////////////////
         case PGM_READY:
             display.readyScreen(batteryPercentage);
+            //CHECK BLUETOOTH
+            if(Serial2.available()){
+            //TO FUNKY SHIT WITH BLUETOOTH
+            }
             //CHECK START/STOP BUTTON PRESS
             if(digitalRead(startButtonPin) == HIGH){
                 currentState = PGM_STARTED;
@@ -251,26 +285,55 @@ void loop()
             //Decrease time left
             if(currentTime > (lastTimeTimeLeftWasUpdated + 1000)){
                 timeLeftOfProcess -= 1;
+                lastTimeTimeLeftWasUpdated = currentTime;
             }
             display.runningScreen(currentPictureNr,lastPictureNr,batteryPercentage,timeLeftOfProcess);
             switch(currentProcessEvent){
-                case EVT_NOTHING:
-
-                break;
                 case EVT_NEW:
-                //CALC CAMERA CORDINATES
-                //SET EVT_RUN MOTORS
+                    //CALC CAMERA CORDINATES - NR OF PICTURES
+                    currentPictureNr = 1;
+                    pictureNrInCurrentHDR = 1;
+                    evValue = panoramaSettings.getPlusMinusEv();
+                    lastPictureNr = panoramaSettings.getNrOfPictures();
+                    //SET EVT_RUN MOTORS
+                    currentProcessEvent = EVT_RUN_MOTORS;
                 break;
                 case EVT_RUN_MOTORS:
-                //MOVE CAMERA TO array cordinates(i)
+                    //MOVE CAMERA TO array cordinates(currentPictureNr)
+                    camera.move(panoramaSettings.calcPanCordinate(currentPictureNr), 
+                                panoramaSettings.calcTiltCordinate(currentPictureNr));
 
-                //Check for cameraInPosition and set evt_CHANGE_CAMERA_PROPERTY
+                    if(camera.inPosition()){
+                        currentProcessEvent = EVT_CHANGE_CAMERA_PROPERTY;
+                    }
+                    //Check for cameraInPosition and set evt_CHANGE_CAMERA_PROPERTY
                 break;
                 case EVT_CHANGE_CAMERA_PROPERTY:
-                // SET WHAT SHOULD CHANGE AND SPAM Usb.Task();
+                    if(pictureNrInCurrentHDR <= 2*evValue +1){
+                        int currentEv = -1*evValue + pictureNrInCurrentHDR - 1;
+                        shutterSpeedValue = panoramaSettings.getShutterSpeed(currentEv);
+
+                        cameraPropertyChanged = false;
+                        Usb.Task();
+                        if(cameraPropertyChanged){
+                            cameraPhotoIsTaken = false;
+                            currentProcessEvent = EVT_TAKE_PHOTO;
+                        }
+                    }else{
+                        currentPictureNr++;
+                        currentProcessEvent = EVT_RUN_MOTORS;
+                    }
+
+                    
+                    // SET WHAT SHOULD CHANGE AND SPAM Usb.Task();
                 break;
                 case EVT_TAKE_PHOTO:
-                // SPAM TAKE PHOTO Usb.Task();
+                    // SPAM TAKE PHOTO Usb.Task();
+                    Usb.Task();
+                    if(cameraPhotoIsTaken){
+                        pictureNrInCurrentHDR++;
+                        currentProcessEvent = EVT_CHANGE_CAMERA_PROPERTY;
+                    }
                 break;
             }
             break;
@@ -301,7 +364,7 @@ void loop()
                 lastTimeButtonWasPressed = currentTime;
             }
 
-            display.pauseScreen(7,24,batteryPercentage,500);
+            display.pauseScreen(currentPictureNr,lastPictureNr,batteryPercentage,timeLeftOfProcess);
             break;
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -324,7 +387,7 @@ void loop()
             display.resettingScreen();
             //NOLLSTÄLLA ALLT
             if(currentTime > lastTimeToResetTime + RESET_DELAY_TIMER ){
-                currentState = PGM_READY;
+                currentState = PGM_SETUP;
             }
             break;
 ////////////////////////////////////////////////////////////

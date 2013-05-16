@@ -20,13 +20,14 @@ class RotateCamera
 				//GEAR RATIO BETWEEN MOTOR AND CAMERA MOVEMENT
 				_gearRatio = 50;
 
+				_satAngle = 0.05;
 				_stepperTilt.setMaxSpeed(6000);
 				_stepperPan.setMaxSpeed(6000);
 				
 			}
 		
 
-		
+		bool inPosition();
 		void move(float panCordinate, float tiltCordinate);
 	private:
 		AngularSensor 		_sensorTilt;
@@ -37,6 +38,11 @@ class RotateCamera
 
 		float 				_speed;
 		int					_gearRatio;
+
+		bool				_tiltInPosition;
+		bool				_panInPosition;
+
+		float				_satAngle;
 
 		void pan(float cordinate);
 		void tilt(float cordinate);

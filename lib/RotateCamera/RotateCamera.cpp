@@ -10,27 +10,34 @@ void RotateCamera::move(float panCordinate, float tiltCordinate){
 
 
 }
-
+bool RotateCamera::inPosition(){
+	return (_tiltInPosition && _panInPosition);
+}
 //Private
 void RotateCamera::pan(float cordinate){
 	//Calc degs to move
 	float currentCordinate = (float)_sensorPan.readDeg();
 	float degsToMove = cordinate - currentCordinate;
-	
+	_panInPosition = (degsToMove < _satAngle) ? true : false;
 	//Move camera
-	float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
-	_stepperPan.move(steppsToMove);
-	_stepperPan.setSpeed(_speed);
+	if(!_panInPosition){
+		float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
+		_stepperPan.move(steppsToMove);
+		_stepperPan.setSpeed(_speed);
+	}
 }
 
 void RotateCamera::tilt(float cordinate){
 	//Calc degs to move
 	float currentCordinate = (float)_sensorTilt.readDeg();
 	float degsToMove = cordinate - currentCordinate;
+	_tiltInPosition = (degsToMove < _satAngle) ? true : false;
 	//Move camera
-	float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
-	_stepperTilt.move(steppsToMove);
-	_stepperTilt.setSpeed(_speed);
+	if(!_tiltInPosition){
+		float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
+		_stepperTilt.move(steppsToMove);
+		_stepperTilt.setSpeed(_speed);
+	}
 }
 
 float RotateCamera::calcSteppsToMove(float degs){
