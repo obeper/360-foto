@@ -51,7 +51,7 @@ PanoramaSettings::PanoramaSettings(float focal, float sensorH, float sensorV, fl
 	_shutterSpeeds[29] = 349;
 	_shutterSpeeds[30] = 351;
 	_shutterSpeeds[31] = 354;
-	_shutterSpeeds[32] = 356;
+	_shutterSpeeds[32] = 101;
 	_shutterSpeeds[33] = 359;
 	_shutterSpeeds[34] = 362;
 	_shutterSpeeds[35] = 364;
@@ -86,7 +86,7 @@ void PanoramaSettings::setFocalLength(float focal){
 int PanoramaSettings::getPlusMinusEv(){	
 	return _plusMinusEv;
 }
-void PanoramaSettings::setplusMinusEv(int ev){
+void PanoramaSettings::setPlusMinusEv(int ev){
 	_plusMinusEv = ev;
 }
 
@@ -95,32 +95,57 @@ int	PanoramaSettings::getMiddShutterSpeed(){
 }
 
 void PanoramaSettings::setMiddShutterSpeed(int code){
-	_midShutterSpeedIndex = this->getShutterSpeedIndex(code);
-	_midShutterSpeed = code;
+	int midShutterSpeedIndex = this->getShutterSpeedIndex(code);
+
+	if(midShutterSpeedIndex != -1 ){
+		_midShutterSpeed = code;
+		_midShutterSpeedIndex = midShutterSpeedIndex;
+	}
+	
+	
 }
 
 float PanoramaSettings::calcPanCordinate(int picNr){
-	if(picNr == 0) return 0;
-	return picNr*(_verticalAngle/_verticalPics);
-	//FEEEEL
+	float horizontal_step = 360.0/_horizontalPics;
+	if(picNr >= _totalNrOfPictures - 2.0){
+		return 0.0;
+	}else {
+		return ((picNr % _horizontalPics)*horizontal_step);
+	}	
 } 
 float PanoramaSettings::calcTiltCordinate(int picNr){
-	if(picNr == 0) return 0;
-	return picNr*(360/_horizontalPics);
-	//FEEEL
+	if(picNr == _totalNrOfPictures - 2.0){
+		return 90.0;
+	}else{
+		return -90.0;
+	}
+	float tilt_start = 0.0 - (_verticalAngle - _fovVertical)/2;
+	float tilt_stop = 180 - abs(tilt_start);
+	float tilt_middle = tilt_stop - abs(tilt_start);
+	float tilt_spann = abs(tilt_middle);
+	float vertical_step = tilt_spann/vertical_pics;
+
+	float tilt_row = ((pic_number- (pic_number % horizontal_pics))/horizontal_pics)
+	return tilt_deg = (tilt_row*vertical_step) + tilt_start;
 }
 
 int PanoramaSettings::getShutterSpeed(int evNr){
 	int newIndex = _midShutterSpeedIndex + evNr;
-	return newIndex;//_shutterSpeeds[newIndex];
+	newIndex = (newIndex > 54) ? 54 : newIndex;
+	newIndex = (newIndex < 0) ? 0 : newIndex;
+	return _shutterSpeeds[newIndex];
 }
-void PanoramaSettings::calcNrOfPictures(){
-	float fovHorizontal = (2.0 * atan(_sensorHorizontal / (2.0 * _focalLength))) * (180.0/3.14);
-	float fovVertical =   (2.0 * atan(_sensorVertical / (2.0 * _focalLength))) * (180.0/3.14);
 
-	_horizontalPics = (int)(((360/fovHorizontal)*_overlap)+0.5);
-	_verticalAngle = 180 - min(fovHorizontal,fovVertical);
-	_verticalPics = (int)((_verticalAngle/fovVertical)*_overlap + 0.5);
+
+
+void PanoramaSettings::calcNrOfPictures(){
+
+	_fovHorizontal = (2.0 * atan(_sensorHorizontal / (2.0 * _focalLength))) * (180.0/3.14);
+	_fovVertical = (2.0 * atan(_sensorVertical / (2.0 * _focalLength))) * (180.0/3.14);
+	
+	_horizontalPics = (int)((360.0/_fovHorizontal)*(1.0+_overlap) + 0.5);
+	_verticalAngle = 180 - (1.0 - _overlap)*min(_fovHorizontal,_fovVertical);
+	_verticalPics = (int)((_verticalAngle/_fovVertical)*(_overlap+1.0) + 0.5);
 
 	_totalNrOfPictures = 2.0 + _horizontalPics*_verticalPics;
 	
@@ -133,6 +158,5 @@ int PanoramaSettings::getShutterSpeedIndex(int code){
 			return i;
 		}
 	}
-	return 27;
-	return 0;
+	return -1;
 }

@@ -18,7 +18,7 @@ class PanoramaSettings
     void 	setFocalLength(float focal);
 
     int		getPlusMinusEv();
-	void 	setplusMinusEv(int ev);
+	void 	setPlusMinusEv(int ev);
 
 	int		getMiddShutterSpeed();
 	void 	setMiddShutterSpeed(int code);
@@ -27,6 +27,7 @@ class PanoramaSettings
     float 	calcTiltCordinate(int picNr);
 
     int getShutterSpeed(int evNr);
+
   private:
   	float 	_focalLength; 
 	float 	_sensorHorizontal; 
@@ -36,6 +37,9 @@ class PanoramaSettings
 	int		_plusMinusEv;
 	int		_midShutterSpeed;
 	int		_midShutterSpeedIndex;
+
+	float	_fovVertical;
+	float	_fovHorizontal;
 
 	int	  	_totalNrOfPictures;
 	int	 	_horizontalPics;

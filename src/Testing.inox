@@ -1,0 +1,28 @@
+#include "PanoramaSettings.h"
+
+PanoramaSettings apa(15.0, 22.3, 14.9, 1.2);
+int i;
+
+void setup() {
+  Serial.begin(9600);
+  i = -7;
+apa.setMiddShutterSpeed(317);
+  Serial.println("LLLLLLLL");
+}	
+
+void loop() {
+
+	if(i <= 7){
+		Serial.println("-----------------");
+		Serial.println(i);
+		Serial.println("GER->");
+		Serial.println(apa.getShutterSpeed(i));
+		Serial.println("-----------------");
+
+		delay(2000);
+		i++;
+	}
+
+
+	delay(1000);
+}

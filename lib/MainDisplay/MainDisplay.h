@@ -16,6 +16,7 @@ class MainDisplay : public LiquidCrystal
     //SCREENS
     void onScreen();
     void readyScreen(int batteryStatus);
+    void connectCameraScreen();
     void receivingDataScreen();
     void startScreen(int timeToStart);
     void runningScreen(int picture, int lastPicture, int batteryStatus, int timeLeft);

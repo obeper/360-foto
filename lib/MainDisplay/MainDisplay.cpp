@@ -29,6 +29,13 @@ void MainDisplay::readyScreen(int batteryStatus){
 	this->printRigthUp((String)batteryStatus + "%");
 	_lastScreenUpdate = millis();
 }
+void MainDisplay::connectCameraScreen(){
+	if(!this->shouldRefresh())return;
+	this->clear();
+	this->printCenterUp("Connect");
+	this->printCenterDown("Cannon EOS");
+	_lastScreenUpdate = millis();
+}
 void MainDisplay::receivingDataScreen(){
 	if(!this->shouldRefresh())return;
 		this->clear();
