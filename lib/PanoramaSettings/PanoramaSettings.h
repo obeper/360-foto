@@ -11,9 +11,8 @@ class PanoramaSettings
 
   	//CONSTRUCT
     PanoramaSettings(float focal, float sensorH, float sensorV, float overlap);
+
     int getNrOfPictures();
-
-
 
     void 	setFocalLength(float focal);
 

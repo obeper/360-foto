@@ -22,6 +22,7 @@
 #include "RotateCamera.h"
 #include "BatterySensor.h"
 #include "PanoramaSettings.h"
+#include "Bluetooth.h"
 
 enum ProgramState {PGM_SETUP, PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET};
 enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_BLUETOOTH_IS_ACTIVE, EVT_LAST_PICTURE_IS_TAKEN};
@@ -51,8 +52,9 @@ MainDisplay display(22,13,12,23,11,24);
 
 BatterySensor battery(8);
 
+Bluetooth bluetooth(3);
 //Camera 15.0 brännvidd, sensorH 22.3, sensorV 14.3, overlap 1.2
-PanoramaSettings panoramaSettings(15.0, 22.3, 14.9, 1.2);
+PanoramaSettings panoramaSettings(15.0, 22.3, 14.9, 0.2);
 ProgramState currentState;
 
 int startButtonPin;
@@ -77,6 +79,9 @@ unsigned long currentTime;
 //DEBUG
 unsigned long lastDebugTime;
 
+//FOTO SETTINGS
+int cameraPropertyName;
+int cameraPropertyValue;
 
 //FOTOPROCESS VARIABLES
 int currentPictureNr;
@@ -146,6 +151,14 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
                  Serial.println(shutterSpeedValue);
                 cameraPropertyChanged = true;
             }
+        }else if(currentProcessEvent == EVT_BLUETOOTH_IS_ACTIVE){
+            uint16_t rc2 = Eos.SetProperty(cameraPropertyName, cameraPropertyValue);
+            if(rc2 == PTP_RC_OK){
+                 Serial.println("Camera property:");
+                 Serial.println(cameraPropertyValue);
+                 bluetooth.updated();
+                 currentProcessEvent = EVT_NEW;
+            }
         }
        
     
@@ -186,6 +199,12 @@ void setup()
     timeToStartSec = STARTING_DELAY_TIMER;
     currentPictureNr = 0;
     lastPictureNr = 0;
+    
+    //Statndard väden
+        shutterSpeedValue = 317;
+        panoramaSettings.setPlusMinusEv(2);
+        panoramaSettings.setMiddShutterSpeed(shutterSpeedValue);
+
 
     cameraConnected = false;
     display.setRefreshRate(800);
@@ -239,15 +258,7 @@ void loop()
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
         case PGM_SETUP:
-            currentPictureNr = 0;
-            lastPictureNr = 0;
-            timeLeftOfProcess = 4000;
-            currentProcessEvent = EVT_NEW;
-            shutterSpeedValue = 317;
-            evValue = 1;
-            cameraPropertyChanged = false;
-            cameraPhotoIsTaken = false;
-            panoramaSettings.setPlusMinusEv(2);
+            
             display.connectCameraScreen();
             Usb.Task();
             if(cameraConnected){
@@ -264,12 +275,32 @@ void loop()
                 currentState = PGM_SETUP;
             }
             //CHECK BLUETOOTH
-            if(Serial2.available()){
-            //TO FUNKY SHIT WITH BLUETOOTH
+            if(bluetooth.newDataToRead()){
+                bluetooth.handleAction();
+                Serial.println("Bluetooth!!");
+                if(bluetooth.updateShutterVariable()){
+                     Serial.println("Shutter UPDATED");
+                    panoramaSettings.setMiddShutterSpeed(bluetooth.readPropertyValue());
+                }else if(bluetooth.updateEvVariable()){
+                    Serial.println("EV UPDATED");
+                    panoramaSettings.setPlusMinusEv(bluetooth.readPropertyValue());
+                }else if(bluetooth.updateCameraSetting()){
+                    currentProcessEvent = EVT_BLUETOOTH_IS_ACTIVE;
+                    cameraPropertyName = bluetooth.readPropertyName();
+                    cameraPropertyValue = bluetooth.readPropertyValue();
+                }
+                delay(1);
             }
+
             //CHECK START/STOP BUTTON PRESS
             if(digitalRead(startButtonPin) == HIGH){
                 currentState = PGM_STARTED;
+                // Zero Process variables
+                currentPictureNr = 0;
+                lastPictureNr = 0;
+                cameraPropertyChanged = false;
+                cameraPhotoIsTaken = false;
+                currentProcessEvent = EVT_NEW;
             }
             break;
 ////////////////////////////////////////////////////////////
@@ -307,9 +338,10 @@ void loop()
             switch(currentProcessEvent){
                 case EVT_NEW:
                     //CALC CAMERA CORDINATES - NR OF PICTURES
+                    timeLeftOfProcess = 4000;
                     currentPictureNr = 1;
                     pictureNrInCurrentHDR = 1;
-                    panoramaSettings.setMiddShutterSpeed(410);
+      
                     evValue = panoramaSettings.getPlusMinusEv();
                     lastPictureNr = panoramaSettings.getNrOfPictures();
                     //SET EVT_RUN MOTORS
@@ -318,8 +350,8 @@ void loop()
                 case EVT_RUN_MOTORS:
                     //MOVE CAMERA TO array cordinates(currentPictureNr)
                 /*
-                    camera.move(panoramaSettings.calcPanCordinate(currentPictureNr), 
-                                panoramaSettings.calcTiltCordinate(currentPictureNr));
+                    camera.move(panoramaSettings.calcPanCordinate(currentPictureNr-1), 
+                                panoramaSettings.calcTiltCordinate(currentPictureNr-1));
 
                     if(camera.inPosition()){
                         currentProcessEvent = EVT_CHANGE_CAMERA_PROPERTY;

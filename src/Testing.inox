@@ -1,28 +1,29 @@
 #include "PanoramaSettings.h"
-
-PanoramaSettings apa(15.0, 22.3, 14.9, 1.2);
-int i;
-
+#include "Bluetooth.h"
+//PanoramaSettings apa(15.0, 22.3, 14.9, 0.2);
+Bluetooth bluetooth(3);
+int antalPictures;
 void setup() {
   Serial.begin(9600);
-  i = -7;
-apa.setMiddShutterSpeed(317);
-  Serial.println("LLLLLLLL");
+  Serial2.begin(115200);
+
 }	
 
 void loop() {
 
-	if(i <= 7){
-		Serial.println("-----------------");
-		Serial.println(i);
-		Serial.println("GER->");
-		Serial.println(apa.getShutterSpeed(i));
-		Serial.println("-----------------");
-
-		delay(2000);
-		i++;
+	if(bluetooth.newDataToRead()){
+		bluetooth.handleAction();
+		if(bluetooth.updateProgramVariable()){
+			Serial.println("----");
+			Serial.println(bluetooth.readPropertyName());
+			Serial.println(bluetooth.readPropertyValue());
+		}else if(bluetooth.updateCameraSetting()){
+			Serial.println("----");
+			Serial.println(bluetooth.readPropertyName());
+			Serial.println(bluetooth.readPropertyValue());
+		}
+		delay(1);
 	}
-
-
-	delay(1000);
+	
 }
+

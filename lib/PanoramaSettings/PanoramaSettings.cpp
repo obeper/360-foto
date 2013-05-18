@@ -15,7 +15,7 @@ PanoramaSettings::PanoramaSettings(float focal, float sensorH, float sensorV, fl
 	_focalLength = 15.0; 
 	_sensorHorizontal =22.3; 
 	_sensorVertical =14.9; 
-	_overlap = 1.2;
+	_overlap = 0.2;
 	*/
 	this->calcNrOfPictures();
 
@@ -116,17 +116,17 @@ float PanoramaSettings::calcPanCordinate(int picNr){
 float PanoramaSettings::calcTiltCordinate(int picNr){
 	if(picNr == _totalNrOfPictures - 2.0){
 		return 90.0;
-	}else{
+	}else if(picNr == _totalNrOfPictures - 1.0){
 		return -90.0;
 	}
 	float tilt_start = 0.0 - (_verticalAngle - _fovVertical)/2;
-	float tilt_stop = 180 - abs(tilt_start);
+	float tilt_stop = 180.0 - abs(tilt_start);
 	float tilt_middle = tilt_stop - abs(tilt_start);
 	float tilt_spann = abs(tilt_middle);
-	float vertical_step = tilt_spann/vertical_pics;
+	float vertical_step = tilt_spann/_verticalPics;
 
-	float tilt_row = ((pic_number- (pic_number % horizontal_pics))/horizontal_pics)
-	return tilt_deg = (tilt_row*vertical_step) + tilt_start;
+	float tilt_row = ((picNr- (picNr % _horizontalPics))/_horizontalPics);
+	return  (tilt_row*vertical_step) + tilt_start;
 }
 
 int PanoramaSettings::getShutterSpeed(int evNr){
@@ -140,14 +140,26 @@ int PanoramaSettings::getShutterSpeed(int evNr){
 
 void PanoramaSettings::calcNrOfPictures(){
 
-	_fovHorizontal = (2.0 * atan(_sensorHorizontal / (2.0 * _focalLength))) * (180.0/3.14);
-	_fovVertical = (2.0 * atan(_sensorVertical / (2.0 * _focalLength))) * (180.0/3.14);
-	
-	_horizontalPics = (int)((360.0/_fovHorizontal)*(1.0+_overlap) + 0.5);
-	_verticalAngle = 180 - (1.0 - _overlap)*min(_fovHorizontal,_fovVertical);
-	_verticalPics = (int)((_verticalAngle/_fovVertical)*(_overlap+1.0) + 0.5);
+		/*
+	_focalLength = 15.0; 
+	_sensorHorizontal =22.3; 
+	_sensorVertical =14.9; 
+	_overlap = 1.2;
+	*/
 
-	_totalNrOfPictures = 2.0 + _horizontalPics*_verticalPics;
+	_fovHorizontal = (2.0 * atan(_sensorHorizontal / (2.0 * _focalLength))) * (180.0/3.14);
+	//73.3;
+
+	_fovVertical = (2.0 * atan(_sensorVertical / (2.0 * _focalLength))) * (180.0/3.14);
+	//52.85
+
+	_horizontalPics = (int)((360.0/_fovHorizontal)*(1.0+_overlap) + 0.5);
+	//6
+	_verticalAngle = 180.0 - (1.0 - _overlap)*min(_fovHorizontal,_fovVertical);
+	//137.72
+	_verticalPics = (int)((_verticalAngle/_fovVertical)*(_overlap+1.0) + 0.5);
+	//3
+	_totalNrOfPictures = 2 + _horizontalPics*_verticalPics;
 	
 
 }
