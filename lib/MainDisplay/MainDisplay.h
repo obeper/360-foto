@@ -22,9 +22,11 @@ class MainDisplay : public LiquidCrystal
     void runningScreen(int picture, int lastPicture, int batteryStatus, int timeLeft);
     void pauseScreen(int picture, int lastPicture, int batteryStatus, int timeLeft);
     void doneScreen(int picture, int lastPicture, int batteryStatus, int timeLeft);
+    void propertyChangedScreen(int batteryStatus, String property);
     void resettingScreen();
     void resumeScreen(int timeToResume);
     void setRefreshRate(unsigned long refreshRate);
+
 
   private:
     int 			    _width;

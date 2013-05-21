@@ -33,13 +33,14 @@ enum CameraEvent {EVT_BT_NOTHING, EVT_BT_CHANGE_PROP, EVT_BT_TAKE_PHOTO};
 
 //DEFINE MAIN OBJECTS AND CONSTANTS
 
-#define BATTERY_READ_INTERVAL   5000       // mSEC
-#define BATTERY_UPDATE_INTERVAL 20000       // mSEC
-#define STARTING_DELAY_TIMER    6           // SEC
-#define RESUME_DELAY_TIMER      6           // SEC
-#define BUTTON_DELAY_TIMER      1500        // mSEC
-#define RESET_DELAY_TIMER       5000        // mSEC
-#define BUTTON_DELAY_TO_RESET   2500        // mSEC
+#define BATTERY_READ_INTERVAL       5000       // mSEC
+#define BATTERY_UPDATE_INTERVAL     20000       // mSEC
+#define STARTING_DELAY_TIMER        6           // SEC
+#define RESUME_DELAY_TIMER          6           // SEC
+#define BUTTON_DELAY_TIMER          1500        // mSEC
+#define RESET_DELAY_TIMER           5000        // mSEC
+#define BUTTON_DELAY_TO_RESET       2500        // mSEC
+#define BT_SHOW_INFO_SCREEN_DELAY   3000        // mSEC
 
 
 
@@ -58,9 +59,12 @@ Bluetooth bluetooth(6);
 PanoramaSettings panoramaSettings(15.0, 22.3, 14.9, 0.2);
 ProgramState currentState;
 
+
+//USERINTERFACE PINS
 int startButtonPin;
 int statusLedRGB[3] = {4,5,3};
 
+//TIMERS
 int batteryPercentage;
 unsigned long lastBatteryReadTime; 
 unsigned long lastBatteryUpdateTime; 
@@ -68,13 +72,17 @@ unsigned long lastTimeToStartTime;
 unsigned long lastTimeButtonWasPressed;
 unsigned long lastTimeToResetTime;
 unsigned long lastTimeTimeLeftWasUpdated;
-
 unsigned long buttonPressedTime;
+unsigned long currentTime;
+unsigned long lastTimeBTPropertyChanged;
+
+
+//CONTROL GLOBALS
 bool wasHigh;
 bool startByBluetooth;
 int timeToStartSec;
 
-unsigned long currentTime;
+
 
 
 //DEBUG
@@ -95,9 +103,12 @@ int shutterSpeedValue;
 bool cameraPhotoIsTaken;
 bool cameraPropertyChanged;
 bool cameraConnected;
+
+//EVENT ENUMS
 ProcessEvent currentProcessEvent;
 CameraEvent currentCameraEvent;
 
+//CAMERA CONTROL CLASS
 class CamStateHandlers : public PTPStateHandlers
 {
       bool stateConnected;
@@ -172,26 +183,38 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
 
 
 
-
-
-
 void setup()
 {
     Serial.begin(9600);
+
+    //START BLUETOOTH
     Serial2.begin(115200);
+
+
     int timeNow = millis();
 
+
     display.onScreen();
+
+
+    //START USB 
      if (Usb.Init() == -1)
         Serial.println("OSC did not start.");
+
+
+    //PGM DEFAULTS
     currentState = PGM_SETUP;
     currentProcessEvent = EVT_NOTHING;
+
+
 
     startButtonPin = 2;
     pinMode(startButtonPin, INPUT);
     pinMode(statusLedRGB[0], OUTPUT);
     pinMode(statusLedRGB[1], OUTPUT);
     pinMode(statusLedRGB[2], OUTPUT);
+
+    //RESET ALL TIMERS
     lastBatteryReadTime = timeNow;
     lastTimeToStartTime = timeNow;
     lastTimeButtonWasPressed = timeNow;
@@ -199,6 +222,7 @@ void setup()
     lastDebugTime = timeNow;
     lastBatteryUpdateTime = timeNow;
     lastTimeTimeLeftWasUpdated = timeNow;
+    lastTimeBTPropertyChanged = timeNow - 20000;
     
     buttonPressedTime = 0;
     wasHigh = false;
@@ -207,7 +231,7 @@ void setup()
     currentPictureNr = 0;
     lastPictureNr = 0;
     
-    //Statndard väden
+    //Statndard väden som panoramainställningar
         shutterSpeedValue = 399;
         panoramaSettings.setPlusMinusEv(1);
         panoramaSettings.setMiddShutterSpeed(shutterSpeedValue);
@@ -260,7 +284,7 @@ void loop()
 
 
     
-
+    //WHAT TO LOOP - CHECK PRPGRAM_STATE
     switch(currentState){
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -278,12 +302,14 @@ void loop()
         case PGM_READY:
             analogWrite(statusLedRGB[1], 15);
             analogWrite(statusLedRGB[0], 0);
-            display.readyScreen(batteryPercentage);
+            if(currentTime > (lastTimeBTPropertyChanged + BT_SHOW_INFO_SCREEN_DELAY)){
+                display.readyScreen(batteryPercentage);
+            }
+            
             Usb.Task();
             if(!cameraConnected){
                 currentState = PGM_SETUP;
             }
-            //CHECK BLUETOOTH
 
 
             //CHECK START/STOP BUTTON PRESS
@@ -305,6 +331,7 @@ void loop()
 
         case PGM_STARTED:
             
+            //COUNTDOWN TO START
             if(currentTime > lastTimeToStartTime + 1000){
                 display.startScreen(timeToStartSec);
                 lastTimeToStartTime = currentTime;
@@ -321,7 +348,8 @@ void loop()
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
         case PGM_RUNNING:
-            //Check button
+
+            //Check button for PAUS-ACTION
             if(digitalRead(startButtonPin) == HIGH && currentTime > (lastTimeButtonWasPressed + BUTTON_DELAY_TIMER )){
                 currentState = PGM_PAUSED;
                 lastTimeButtonWasPressed = currentTime;
@@ -335,13 +363,14 @@ void loop()
             switch(currentProcessEvent){
                 case EVT_NEW:
                     //CALC CAMERA CORDINATES - NR OF PICTURES
+                    // INIIT EVERTHING FOR NEW PROCESS
+
                     timeLeftOfProcess = 4000;
                     currentPictureNr = 1;
                     pictureNrInCurrentHDR = 1;
       
                     evValue = panoramaSettings.getPlusMinusEv();
                     lastPictureNr = panoramaSettings.getNrOfPictures();
-                    //SET EVT_RUN MOTORS
                     currentProcessEvent = EVT_RUN_MOTORS;
                 break;
                 case EVT_RUN_MOTORS:
@@ -370,9 +399,13 @@ void loop()
                             currentProcessEvent = EVT_TAKE_PHOTO;
                         }
                     }else{
-                        pictureNrInCurrentHDR = 1;
-                        currentPictureNr++;
-                        currentProcessEvent = EVT_RUN_MOTORS;
+                        if(currentPictureNr >= lastPictureNr){
+                            currentState = PGM_DONE;
+                        }else{
+                            pictureNrInCurrentHDR = 1;
+                            currentPictureNr++;
+                            currentProcessEvent = EVT_RUN_MOTORS;
+                        }
                     }
 
                     
@@ -445,24 +478,37 @@ void loop()
             break;
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
+        case PGM_DONE:
+            display.doneScreen(currentPictureNr,lastPictureNr,batteryPercentage,timeLeftOfProcess);
+            //CHECK START/STOP BUTTON PRESS
+            if(digitalRead(startButtonPin) == HIGH){
+                currentState = PGM_READY;
+            }
+            break;
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
         }
 
             //CHECK BLUETOOTH
             if(bluetooth.newDataToRead()){
                 bluetooth.handleAction();
-                if(bluetooth.updateShutterVariable()){
-                     Serial.println("Shutter UPDATED");
+                if(bluetooth.updateShutterVariable()  || currentState == PGM_READY){
+                    display.propertyChangedScreen(batteryPercentage,"Middle shutterspeed changed");
+                    lastTimeBTPropertyChanged = currentTime;
                     panoramaSettings.setMiddShutterSpeed(bluetooth.readPropertyValue());
                     bluetooth.updated();
-                }else if(bluetooth.updateEvVariable()){
-                    Serial.println("EV UPDATED");
+                }else if(bluetooth.updateEvVariable()|| currentState == PGM_READY){
+                    display.propertyChangedScreen(batteryPercentage,"EV changed");
+                    lastTimeBTPropertyChanged = currentTime;
                     panoramaSettings.setPlusMinusEv(bluetooth.readPropertyValue());
                     bluetooth.updated();
-                }else if(bluetooth.updateCameraSetting()){
+                }else if(bluetooth.updateCameraSetting()|| currentState == PGM_READY){
+                    display.propertyChangedScreen(batteryPercentage,"Property changed");
+                    lastTimeBTPropertyChanged = currentTime;
                     currentCameraEvent = EVT_BT_CHANGE_PROP;
                     cameraPropertyName = bluetooth.readPropertyName();
                     cameraPropertyValue = bluetooth.readPropertyValue();
-                }else if(bluetooth.shouldTakePicture()){
+                }else if(bluetooth.shouldTakePicture()|| currentState == PGM_READY){
                     currentCameraEvent = EVT_BT_TAKE_PHOTO;
                 }else if(bluetooth.startStopProgram()){
                     if(currentState == PGM_RUNNING){

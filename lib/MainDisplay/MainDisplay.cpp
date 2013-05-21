@@ -29,6 +29,14 @@ void MainDisplay::readyScreen(int batteryStatus){
 	this->printRigthUp((String)batteryStatus + "%");
 	_lastScreenUpdate = millis();
 }
+void MainDisplay::propertyChangedScreen(int batteryStatus, String property){
+	if(!this->shouldRefresh())return;
+	this->clear();
+	this->printLeftUp("Ready");
+	this->printRigthUp((String)batteryStatus + "%");
+	this->printCenterDown(property);
+	_lastScreenUpdate = millis();
+}
 void MainDisplay::connectCameraScreen(){
 	if(!this->shouldRefresh())return;
 	this->clear();
@@ -106,6 +114,7 @@ void MainDisplay::resumeScreen(int timeToResume){
 void MainDisplay::setRefreshRate(unsigned long refreshRate){
 	this->_refreshRate = refreshRate;
 }
+
 //PRIVATE
 void MainDisplay::printCenterUp(String wordToPrint){
 	this->setCursor((int)((_width -  wordToPrint.length()) / 2), 0);
