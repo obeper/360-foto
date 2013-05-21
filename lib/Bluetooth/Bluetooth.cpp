@@ -1,6 +1,6 @@
 #include "Bluetooth.h"
 #include "Arduino.h"
-
+#include "canoneos.h"
 
 Bluetooth::Bluetooth(int blueLedPin){
   _blueLedPin = blueLedPin;
@@ -16,26 +16,32 @@ void Bluetooth::updated(){
   _updateShutterVariable = false;
   _shouldStart = false;
   _shouldMoveCamera = false;
+  _shouldTakePicture = false;
+
 }
 void Bluetooth::handleAction(){
     char queryType;
     queryType = Serial2.read();
     _action = queryType;
     delay(1);
-  
-
   switch(_action){
-
       case 'Z':
         this->handleStatusLed();
       break;
       case 'A':
         _propertyValue =  this->readFloatSerial();
-        this->_updateCameraSettings = true;
+        _updateCameraSettings = true;
+        _propertyName = EOS_DPC_Aperture;
       break;
-       case 'W':
+      case 'W':
         _propertyValue =  this->readFloatSerial();
-        this->_updateCameraSettings = true;
+        _propertyName = EOS_DPC_WhiteBalance;
+        _updateCameraSettings = true;
+      break;
+       case 'I':
+        _propertyValue =  this->readFloatSerial();
+        _propertyName = EOS_DPC_Iso;
+        _updateCameraSettings = true;
       break;
        case 'E':
         _propertyValue =  this->readFloatSerial();
@@ -46,7 +52,10 @@ void Bluetooth::handleAction(){
         _updateShutterVariable = true;
       break;
       case 'C':
-        Serial.println("Capture");
+        _shouldTakePicture = true;
+      break;
+      case 'P':
+        _shouldStart = true;
       break;
     }
 
@@ -67,6 +76,9 @@ bool Bluetooth::startStopProgram(){
 bool Bluetooth::moveCamera(){
   return _shouldMoveCamera;
 }
+bool Bluetooth::shouldTakePicture(){
+  return _shouldTakePicture;
+}
 
 int Bluetooth::readPropertyValue(){
  return (int)_propertyValue;
@@ -74,9 +86,7 @@ int Bluetooth::readPropertyValue(){
 int Bluetooth::readPropertyName(){
     return _propertyName;
   }
-bool Bluetooth::shouldStart(){
-  return _shouldStart;
-}
+
 //Private
 
 void Bluetooth::handleStatusLed(){
@@ -87,7 +97,7 @@ void Bluetooth::handleStatusLed(){
   }else{
     analogWrite(_blueLedPin,0);
   }
-  //FLUSH PORT 
+  //FLUSH PORT FROM CRAP 
   while(this->newDataToRead()){
     connectionStatus = Serial2.read();
   }

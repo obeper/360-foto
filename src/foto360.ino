@@ -25,8 +25,8 @@
 #include "Bluetooth.h"
 
 enum ProgramState {PGM_SETUP, PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET};
-enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_BLUETOOTH_IS_ACTIVE, EVT_LAST_PICTURE_IS_TAKEN};
-
+enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_LAST_PICTURE_IS_TAKEN};
+enum CameraEvent {EVT_BT_NOTHING, EVT_BT_CHANGE_PROP, EVT_BT_TAKE_PHOTO};
 //////////////////////////////////////////////
 ////////////////////MAINPROGRAM///////////////
 //////////////////////////////////////////////
@@ -50,15 +50,15 @@ RotateCamera camera(0, 25, 10, 2, 26, 9);
 //int rs, int enable,int d4, int d5, int d6, int d7)
 MainDisplay display(22,13,12,23,11,24);
 
-BatterySensor battery(8);
+BatterySensor battery(2);
 
-Bluetooth bluetooth(3);
+Bluetooth bluetooth(6);
 //Camera 15.0 brännvidd, sensorH 22.3, sensorV 14.3, overlap 1.2
 PanoramaSettings panoramaSettings(15.0, 22.3, 14.9, 0.2);
 ProgramState currentState;
 
 int startButtonPin;
-
+int statusLedRGB[3] = {4,5,3};
 
 int batteryPercentage;
 unsigned long lastBatteryReadTime; 
@@ -70,7 +70,7 @@ unsigned long lastTimeTimeLeftWasUpdated;
 
 unsigned long buttonPressedTime;
 bool wasHigh;
-
+bool startByBluetooth;
 int timeToStartSec;
 
 unsigned long currentTime;
@@ -95,14 +95,14 @@ bool cameraPhotoIsTaken;
 bool cameraPropertyChanged;
 bool cameraConnected;
 ProcessEvent currentProcessEvent;
-
+CameraEvent currentCameraEvent;
 
 class CamStateHandlers : public PTPStateHandlers
 {
       bool stateConnected;
     
 public:
-      CamStateHandlers() : stateConnected(false) {};
+    CamStateHandlers() : stateConnected(false) {};
       
       virtual void OnDeviceDisconnectedState(PTP *ptp);
       virtual void OnDeviceInitializedState(PTP *ptp);
@@ -147,18 +147,21 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
         }else if(currentProcessEvent == EVT_CHANGE_CAMERA_PROPERTY && !cameraPropertyChanged){
             uint16_t rc2 = Eos.SetProperty(EOS_DPC_ShutterSpeed, shutterSpeedValue);
             if(rc2 == PTP_RC_OK){
-                 Serial.println("Camera property:");
-                 Serial.println(shutterSpeedValue);
+                 
                 cameraPropertyChanged = true;
             }
-        }else if(currentProcessEvent == EVT_BLUETOOTH_IS_ACTIVE){
+        }else if(currentCameraEvent == EVT_BT_CHANGE_PROP){
             uint16_t rc2 = Eos.SetProperty(cameraPropertyName, cameraPropertyValue);
             if(rc2 == PTP_RC_OK){
-                 Serial.println("Camera property:");
-                 Serial.println(cameraPropertyValue);
                  bluetooth.updated();
-                 currentProcessEvent = EVT_NEW;
+                 currentCameraEvent = EVT_BT_NOTHING;
             }
+        }else if (currentCameraEvent == EVT_BT_TAKE_PHOTO){
+            uint16_t rc = Eos.Capture();
+             if (rc == PTP_RC_OK){
+                bluetooth.updated();
+                currentCameraEvent = EVT_BT_NOTHING;
+             }
         }
        
     
@@ -174,6 +177,7 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
 void setup()
 {
     Serial.begin(9600);
+    Serial2.begin(115200);
     int timeNow = millis();
 
     display.onScreen();
@@ -184,7 +188,9 @@ void setup()
 
     startButtonPin = 2;
     pinMode(startButtonPin, INPUT);
-
+    pinMode(statusLedRGB[0], OUTPUT);
+    pinMode(statusLedRGB[1], OUTPUT);
+    pinMode(statusLedRGB[2], OUTPUT);
     lastBatteryReadTime = timeNow;
     lastTimeToStartTime = timeNow;
     lastTimeButtonWasPressed = timeNow;
@@ -234,7 +240,7 @@ void loop()
         Serial.println("Process State");
         Serial.println(currentProcessEvent);
         Serial.println("ShutterSpeed:");
-        Serial.println(shutterSpeedValue);
+        Serial.println(cameraConnected);
         lastDebugTime = currentTime;
     }
 */
@@ -269,32 +275,22 @@ void loop()
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
         case PGM_READY:
+            analogWrite(statusLedRGB[1], 15);
+            analogWrite(statusLedRGB[0], 0);
             display.readyScreen(batteryPercentage);
             Usb.Task();
             if(!cameraConnected){
                 currentState = PGM_SETUP;
             }
             //CHECK BLUETOOTH
-            if(bluetooth.newDataToRead()){
-                bluetooth.handleAction();
-                Serial.println("Bluetooth!!");
-                if(bluetooth.updateShutterVariable()){
-                     Serial.println("Shutter UPDATED");
-                    panoramaSettings.setMiddShutterSpeed(bluetooth.readPropertyValue());
-                }else if(bluetooth.updateEvVariable()){
-                    Serial.println("EV UPDATED");
-                    panoramaSettings.setPlusMinusEv(bluetooth.readPropertyValue());
-                }else if(bluetooth.updateCameraSetting()){
-                    currentProcessEvent = EVT_BLUETOOTH_IS_ACTIVE;
-                    cameraPropertyName = bluetooth.readPropertyName();
-                    cameraPropertyValue = bluetooth.readPropertyValue();
-                }
-                delay(1);
-            }
+
 
             //CHECK START/STOP BUTTON PRESS
-            if(digitalRead(startButtonPin) == HIGH){
+            if(digitalRead(startButtonPin) == HIGH || startByBluetooth){
+                startByBluetooth = false;
                 currentState = PGM_STARTED;
+                analogWrite(statusLedRGB[0],15);
+                analogWrite(statusLedRGB[1],0);
                 // Zero Process variables
                 currentPictureNr = 0;
                 lastPictureNr = 0;
@@ -442,6 +438,7 @@ void loop()
         case PGM_RESET:
             display.resettingScreen();
             //NOLLSTÄLLA ALLT
+            currentProcessEvent = EVT_NOTHING;
             if(currentTime > lastTimeToResetTime + RESET_DELAY_TIMER ){
                 currentState = PGM_SETUP;
             }
@@ -450,4 +447,33 @@ void loop()
 ////////////////////////////////////////////////////////////
         }
 
+            //CHECK BLUETOOTH
+            if(bluetooth.newDataToRead()){
+                bluetooth.handleAction();
+                if(bluetooth.updateShutterVariable()){
+                     Serial.println("Shutter UPDATED");
+                    panoramaSettings.setMiddShutterSpeed(bluetooth.readPropertyValue());
+                    bluetooth.updated();
+                }else if(bluetooth.updateEvVariable()){
+                    Serial.println("EV UPDATED");
+                    panoramaSettings.setPlusMinusEv(bluetooth.readPropertyValue());
+                    bluetooth.updated();
+                }else if(bluetooth.updateCameraSetting()){
+                    currentCameraEvent = EVT_BT_CHANGE_PROP;
+                    cameraPropertyName = bluetooth.readPropertyName();
+                    cameraPropertyValue = bluetooth.readPropertyValue();
+                }else if(bluetooth.shouldTakePicture()){
+                    currentCameraEvent = EVT_BT_TAKE_PHOTO;
+                }else if(bluetooth.startStopProgram()){
+                    if(currentState == PGM_RUNNING){
+                        currentState = PGM_PAUSED;
+                    }else if(currentState == PGM_READY){
+                        startByBluetooth = true;
+                    }else if(currentState == PGM_PAUSED){
+                        currentState = PGM_RESUMED; 
+                    }
+                    bluetooth.updated();
+                }
+                delay(1);
+            }
 }

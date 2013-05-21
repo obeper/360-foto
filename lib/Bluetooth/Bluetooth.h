@@ -14,6 +14,7 @@ public:
 	bool updateEvVariable();
 	bool updateShutterVariable();
 	bool startStopProgram();
+	bool shouldTakePicture();
 	bool moveCamera();
 
 	void handleAction();
@@ -30,13 +31,12 @@ private:
 
 
 
-
 	bool	_updateCameraSettings;
 	bool	_updateEvVariable;
 	bool	_updateShutterVariable;
 	bool 	_shouldStart;
 	bool	_shouldMoveCamera;
-
+	bool	_shouldTakePicture;
 
 	void handleStatusLed();
 	float readFloatSerial();

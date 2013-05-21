@@ -130,7 +130,7 @@ float PanoramaSettings::calcTiltCordinate(int picNr){
 }
 
 int PanoramaSettings::getShutterSpeed(int evNr){
-	int newIndex = _midShutterSpeedIndex + evNr;
+	int newIndex = _midShutterSpeedIndex + 3*evNr;
 	newIndex = (newIndex > 54) ? 54 : newIndex;
 	newIndex = (newIndex < 0) ? 0 : newIndex;
 	return _shutterSpeeds[newIndex];
