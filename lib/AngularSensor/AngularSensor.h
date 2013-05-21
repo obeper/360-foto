@@ -8,6 +8,7 @@ class AngularSensor
 public:
 	AngularSensor(int readAnalogPin);
 	double readDeg();
+	double readBit();
 
 private:
 

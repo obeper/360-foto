@@ -6,7 +6,7 @@ BatterySensor::BatterySensor(int analogReadPin)
 {
 	_analogReadPin = analogReadPin;
 	_minVoltage = 3.3;
-	_maxVoltage = 3.8;
+	_maxVoltage = 4.2;
 	for (int i = 0; i < 12; i++)
 	{
 		_voltageList[i] = 0.0;

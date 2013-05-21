@@ -45,7 +45,8 @@ enum CameraEvent {EVT_BT_NOTHING, EVT_BT_CHANGE_PROP, EVT_BT_TAKE_PHOTO};
 
 //int tiltReadAnalogPin, int tiltStepperDirPin, int tiltStepperStepPin,
 //int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin
-RotateCamera camera(0, 25, 10, 2, 26, 9);
+RotateCamera camera( 2, 26, 9,14, 25, 10);
+
 
 //int rs, int enable,int d4, int d5, int d6, int d7)
 MainDisplay display(22,13,12,23,11,24);
@@ -207,8 +208,8 @@ void setup()
     lastPictureNr = 0;
     
     //Statndard väden
-        shutterSpeedValue = 317;
-        panoramaSettings.setPlusMinusEv(2);
+        shutterSpeedValue = 399;
+        panoramaSettings.setPlusMinusEv(1);
         panoramaSettings.setMiddShutterSpeed(shutterSpeedValue);
 
 
@@ -345,16 +346,15 @@ void loop()
                 break;
                 case EVT_RUN_MOTORS:
                     //MOVE CAMERA TO array cordinates(currentPictureNr)
-                /*
+                
                     camera.move(panoramaSettings.calcPanCordinate(currentPictureNr-1), 
                                 panoramaSettings.calcTiltCordinate(currentPictureNr-1));
 
+                   
                     if(camera.inPosition()){
                         currentProcessEvent = EVT_CHANGE_CAMERA_PROPERTY;
                     }
-                    */
-                    delay(2000);
-                    currentProcessEvent = EVT_CHANGE_CAMERA_PROPERTY;
+                
                     //Check for cameraInPosition and set evt_CHANGE_CAMERA_PROPERTY
                 break;
                 case EVT_CHANGE_CAMERA_PROPERTY:
@@ -382,7 +382,7 @@ void loop()
                     // SPAM TAKE PHOTO Usb.Task();
                     Usb.Task();
                     if(cameraPhotoIsTaken){
-                        Serial.println(pictureNrInCurrentHDR);
+
                         pictureNrInCurrentHDR++;
                         currentProcessEvent = EVT_CHANGE_CAMERA_PROPERTY;
                     }

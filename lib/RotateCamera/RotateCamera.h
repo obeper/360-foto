@@ -16,11 +16,11 @@ class RotateCamera
 			_stepperTilt(1,tiltStepperStepPin,tiltStepperDirPin),
 			_stepperPan(1,panStepperStepPin, panStepperDirPin){
 				//BASE SPEED FOR STEPPERMOTORS
-				_speed = 5000;
+				_speed = 2000;
 				//GEAR RATIO BETWEEN MOTOR AND CAMERA MOVEMENT
 				_gearRatio = 50;
 
-				_satAngle = 0.05;
+				_satAngle = 0.3;
 				_stepperTilt.setMaxSpeed(6000);
 				_stepperPan.setMaxSpeed(6000);
 				
@@ -43,10 +43,13 @@ class RotateCamera
 		bool				_panInPosition;
 
 		float				_satAngle;
+		float				_currentPanCordinate;
+		float				_currentTiltCordinate;
 
 		void pan(float cordinate);
 		void tilt(float cordinate);
 		float calcSteppsToMove(float degs);
+		float pathToMove(float cordinate, float currentCordinate);
 };
 
 #endif
