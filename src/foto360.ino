@@ -24,6 +24,8 @@
 #include "PanoramaSettings.h"
 #include "Bluetooth.h"
 
+#include "AngularSensor.h"
+
 enum ProgramState {PGM_SETUP, PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET, PGM_BT_RUN_MOTORS};
 enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_LAST_PICTURE_IS_TAKEN};
 enum CameraEvent {EVT_BT_NOTHING, EVT_BT_CHANGE_PROP, EVT_BT_TAKE_PHOTO, EVT_BT_RUN_MOTORS, EVT_SETUP_CAMERA_SETTINGS};
@@ -46,13 +48,14 @@ enum CameraEvent {EVT_BT_NOTHING, EVT_BT_CHANGE_PROP, EVT_BT_TAKE_PHOTO, EVT_BT_
 
 //int tiltReadAnalogPin, int tiltStepperDirPin, int tiltStepperStepPin,
 //int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin
-RotateCamera camera( 0, 26, 9, 1 , 25, 10);
+RotateCamera camera( 1, 26, 9, 0 , 25, 10);
 
 
 //int rs, int enable,int d4, int d5, int d6, int d7)
 MainDisplay display(22,13,12,23,11,24);
 
 BatterySensor battery(2);
+
 
 Bluetooth bluetooth(6);
 //Camera 15.0 brännvidd, sensorH 22.3, sensorV 14.3, overlap 1.2
@@ -265,6 +268,7 @@ void setup()
     battery.readVoltage();
     delay(200);
     batteryPercentage = battery.readPercentage();
+
 }
 void loop()
 {
@@ -570,9 +574,10 @@ void loop()
         if(currentCameraEvent == EVT_BT_RUN_MOTORS){
             switch(btMotorDirection){
                 case -1:
-                    camera.move(0, 90);
+                    camera.move(0.0, 45.0);
                     if(camera.inPosition()){
                         currentCameraEvent = EVT_BT_NOTHING;
+                        bluetooth.updated();
                     }
                 break;
                 case 0:

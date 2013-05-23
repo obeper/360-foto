@@ -16,11 +16,12 @@ class RotateCamera
 			_stepperTilt(1,tiltStepperStepPin,tiltStepperDirPin),
 			_stepperPan(1,panStepperStepPin, panStepperDirPin){
 				//BASE SPEED FOR STEPPERMOTORS
-				_speed = 1000;
+				_speed = 5000;
 				//GEAR RATIO BETWEEN MOTOR AND CAMERA MOVEMENT
 				_gearRatio = 50;
 
-				_satAngle = 0.3;
+				_satAngle = 1.0;
+				//_sensorTilt.calibrate(-246.0);
 				_stepperTilt.setMaxSpeed(6000);
 				_stepperPan.setMaxSpeed(6000);
 				
