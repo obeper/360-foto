@@ -185,7 +185,7 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
              }
         }else if (currentCameraEvent == EVT_SETUP_CAMERA_SETTINGS){
             int properties[5] = {EOS_DPC_Iso, EOS_DPC_Aperture, EOS_DPC_WhiteBalance, EOS_DPC_AFMode, EOS_DPC_DriveMode};
-            int propVal[5] = {72, 386, 1, 0, 0};
+            int propVal[5] = {72, 63, 1, 0, 0};
 
             uint16_t rc = Eos.SetProperty(properties[setupPropertyCounter], propVal[setupPropertyCounter]);
             if(rc == PTP_RC_OK){
@@ -336,7 +336,7 @@ void loop()
 
 
             //CHECK START/STOP BUTTON PRESS
-            if(digitalRead(startButtonPin) == HIGH || startByBluetooth){
+            if((digitalRead(startButtonPin) == HIGH && currentTime > (lastTimeButtonWasPressed + BUTTON_DELAY_TIMER) )|| startByBluetooth){
                 startByBluetooth = false;
                 currentState = PGM_STARTED;
                 analogWrite(statusLedRGB[0],15);
@@ -506,6 +506,7 @@ void loop()
             //CHECK START/STOP BUTTON PRESS
             if(digitalRead(startButtonPin) == HIGH){
                 currentState = PGM_READY;
+                lastTimeButtonWasPressed = currentTime;
             }
             break;
 ////////////////////////////////////////////////////////////
@@ -574,7 +575,7 @@ void loop()
         if(currentCameraEvent == EVT_BT_RUN_MOTORS){
             switch(btMotorDirection){
                 case -1:
-                    camera.move(0.0, 45.0);
+                    camera.move(0.0, 0.0);
                     if(camera.inPosition()){
                         currentCameraEvent = EVT_BT_NOTHING;
                         bluetooth.updated();

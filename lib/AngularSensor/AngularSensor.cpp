@@ -10,12 +10,12 @@ AngularSensor::AngularSensor(int readAnalogPin){
 //Public
 double AngularSensor::readDeg(){
 	
-	double deg = (double)analogRead(_readAnalogPin)*_degScale;// + _calibrate;
-	/*
+	double deg = (double)analogRead(_readAnalogPin)*_degScale + _calibrate;
+	
 	if(deg < 0){
 		deg += 360;
 	}
-	*/
+	
 	return deg;
 
 }

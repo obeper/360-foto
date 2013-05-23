@@ -20,8 +20,8 @@ class RotateCamera
 				//GEAR RATIO BETWEEN MOTOR AND CAMERA MOVEMENT
 				_gearRatio = 50;
 
-				_satAngle = 1.0;
-				//_sensorTilt.calibrate(-246.0);
+				_satAngle = 2.0;
+				_sensorTilt.calibrate(-245.0);
 				_stepperTilt.setMaxSpeed(6000);
 				_stepperPan.setMaxSpeed(6000);
 				

@@ -63,15 +63,17 @@ void RotateCamera::pan(float cordinate){
 void RotateCamera::tilt(float cordinate){
 	//Calc degs to move
 
-		_currentTiltCordinate =  (float)_sensorTilt.readDeg();
-		
+	_currentTiltCordinate =  (float)_sensorTilt.readDeg();
+	if(cordinate < 0.0 ){
+		cordinate += 360.0;
+	}
 		
 	/*
 	if(cordinate > 90 || cordinate < 270){
 		return;
 	}
 	*/
-	float degsToMove = -1*this->pathToMove(cordinate, _currentTiltCordinate);
+	float degsToMove = -1.0*this->pathToMove(cordinate, _currentTiltCordinate);
 
 
 	_tiltInPosition = (abs(cordinate - _currentTiltCordinate) < _satAngle) ? true : false;
@@ -92,7 +94,7 @@ float RotateCamera::calcSteppsToMove(float degs){
 float RotateCamera::pathToMove(float cordinate, float currentCordinate){
 	//SHORTEST PATH TO CORD
 	float degsToMove;
-	float dir = ((cordinate - currentCordinate) < 0) ? 1.0 : -1.0;
+	float dir = ((cordinate - currentCordinate) < 0.0) ? 1.0 : -1.0;
 	float deg11 = cordinate - currentCordinate;
 	float deg1 = abs(deg11);
 	float deg2 = 360.0 -  deg1;
