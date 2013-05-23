@@ -3,10 +3,9 @@
 //Public
 void RotateCamera::move(float panCordinate, float tiltCordinate){
 
-	//this->tilt(tiltCordinate);
+	this->tilt(tiltCordinate);
 	this->pan(panCordinate);
-	_tiltInPosition = true;
-	//_stepperTilt.runSpeedToPosition();
+	_stepperTilt.runSpeedToPosition();
 	_stepperPan.runSpeedToPosition();
 
 
@@ -21,17 +20,17 @@ void RotateCamera::stop(){
 }
 void RotateCamera::runUp(){
 	float tiltDeg = _sensorTilt.readDeg();
-	if(tiltDeg > 270 && tiltDeg < 90){
+	//if(tiltDeg > 270 && tiltDeg < 90){
 		_stepperTilt.setSpeed(_speed); 
 		_stepperTilt.runSpeed();
-	} 
+	//} 
 }
 void RotateCamera::runDown(){
 	float tiltDeg = _sensorTilt.readDeg();
-	if(tiltDeg > 270 && tiltDeg < 90){
+	//if(tiltDeg > 270 && tiltDeg < 90){
 		_stepperTilt.setSpeed(-1*_speed); 
 		_stepperTilt.runSpeed();
-	}
+	//}
 }
 void RotateCamera::runLeft(){
 	_stepperPan.setSpeed(-1*_speed); 
@@ -70,7 +69,6 @@ void RotateCamera::tilt(float cordinate){
 	//Calc degs to move
 
 		_currentPanCordinate = (float)_sensorTilt.readDeg();
-		lastTiltSensorReadTime = currentTime;
 
 	if(cordinate < 0 ){
 		cordinate += 360;

@@ -529,7 +529,7 @@ void loop()
                     panoramaSettings.setFocalLength(bluetooth.readPropertyValue());
                     bluetooth.updated();
                 }else if(bluetooth.updateCameraSetting() && currentState == PGM_READY){
-                    display.propertyChangedScreen(batteryPercentage,"Property changed");
+                    display.propertyChangedScreen(batteryPercentage,"PROPERTY CHANGED");
                     lastTimeBTPropertyChanged = currentTime;
                     currentCameraEvent = EVT_BT_CHANGE_PROP;
                     cameraPropertyName = bluetooth.readPropertyName();
