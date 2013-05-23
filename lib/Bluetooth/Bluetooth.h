@@ -1,5 +1,5 @@
 #ifndef Bluetooth_h
-#define Bluetooth_h value
+#define Bluetooth_h
 
 
 class Bluetooth
@@ -12,17 +12,26 @@ public:
 	//Types of updates
 	bool updateCameraSetting();
 	bool updateEvVariable();
+	bool updateFocalLength();
 	bool updateShutterVariable();
 	bool startStopProgram();
 	bool shouldTakePicture();
 	bool moveCamera();
-
+	bool shouldStart();
 	void handleAction();
-	//LÄSA
+	//READ 
 	int readPropertyValue();
 	int readPropertyName();
-	bool shouldStart();
 	
+
+	//Bt Run motors
+	bool moveCameraUp();
+	bool moveCameraDown();
+	bool moveCameraLeft();
+	bool moveCameraRight();
+	bool moveCameraHome();
+	bool moveCameraStop();
+	bool anyMotorRunning();
 private:
 	int 	_blueLedPin;
 	char	_action;
@@ -34,9 +43,16 @@ private:
 	bool	_updateCameraSettings;
 	bool	_updateEvVariable;
 	bool	_updateShutterVariable;
+	bool	_updateFocalVariable;
 	bool 	_shouldStart;
 	bool	_shouldMoveCamera;
 	bool	_shouldTakePicture;
+	bool	_manualMoveCameraUp;
+	bool	_manualMoveCameraDown;
+	bool	_manualMoveCameraLeft;
+	bool	_manualMoveCameraRight;
+	bool	_manualMoveCameraHome;
+	bool	_manualMoveCameraStop;
 
 	void handleStatusLed();
 	float readFloatSerial();

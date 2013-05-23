@@ -24,9 +24,9 @@
 #include "PanoramaSettings.h"
 #include "Bluetooth.h"
 
-enum ProgramState {PGM_SETUP, PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET};
+enum ProgramState {PGM_SETUP, PGM_READY,PGM_STARTED, PGM_RUNNING, CAMERA_IN_POSITION, HDR_IS_TAKEN, PGM_DONE, PGM_PAUSED, PGM_RESUMED, PGM_RESET, PGM_BT_RUN_MOTORS};
 enum ProcessEvent {EVT_NOTHING, EVT_NEW, EVT_RUN_MOTORS, EVT_CHANGE_CAMERA_PROPERTY, EVT_TAKE_PHOTO, EVT_LAST_PICTURE_IS_TAKEN};
-enum CameraEvent {EVT_BT_NOTHING, EVT_BT_CHANGE_PROP, EVT_BT_TAKE_PHOTO};
+enum CameraEvent {EVT_BT_NOTHING, EVT_BT_CHANGE_PROP, EVT_BT_TAKE_PHOTO, EVT_BT_RUN_MOTORS, EVT_SETUP_CAMERA_SETTINGS};
 //////////////////////////////////////////////
 ////////////////////MAINPROGRAM///////////////
 //////////////////////////////////////////////
@@ -46,7 +46,7 @@ enum CameraEvent {EVT_BT_NOTHING, EVT_BT_CHANGE_PROP, EVT_BT_TAKE_PHOTO};
 
 //int tiltReadAnalogPin, int tiltStepperDirPin, int tiltStepperStepPin,
 //int panReadAnalogPin, int panStepperDirPin, int panStepperStepPin
-RotateCamera camera( 2, 26, 9,14, 25, 10);
+RotateCamera camera( 0, 26, 9, 1 , 25, 10);
 
 
 //int rs, int enable,int d4, int d5, int d6, int d7)
@@ -92,6 +92,9 @@ unsigned long lastDebugTime;
 int cameraPropertyName;
 int cameraPropertyValue;
 
+//BT
+int btMotorDirection = 0;
+
 //FOTOPROCESS VARIABLES
 int currentPictureNr;
 int lastPictureNr;
@@ -103,6 +106,7 @@ int shutterSpeedValue;
 bool cameraPhotoIsTaken;
 bool cameraPropertyChanged;
 bool cameraConnected;
+bool cameraSetupComplete;
 
 //EVENT ENUMS
 ProcessEvent currentProcessEvent;
@@ -112,6 +116,7 @@ CameraEvent currentCameraEvent;
 class CamStateHandlers : public PTPStateHandlers
 {
       bool stateConnected;
+      int setupPropertyCounter;
     
 public:
     CamStateHandlers() : stateConnected(false) {};
@@ -140,6 +145,7 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
     static unsigned long next_time = 0;
     
     if (!stateConnected){
+        setupPropertyCounter = 0;
         cameraConnected = true;
         stateConnected = true;
     }
@@ -174,14 +180,24 @@ void CamStateHandlers::OnDeviceInitializedState(PTP *ptp)
                 bluetooth.updated();
                 currentCameraEvent = EVT_BT_NOTHING;
              }
+        }else if (currentCameraEvent == EVT_SETUP_CAMERA_SETTINGS){
+            int properties[5] = {EOS_DPC_Iso, EOS_DPC_Aperture, EOS_DPC_WhiteBalance, EOS_DPC_AFMode, EOS_DPC_DriveMode};
+            int propVal[5] = {72, 386, 1, 0, 0};
+
+            uint16_t rc = Eos.SetProperty(properties[setupPropertyCounter], propVal[setupPropertyCounter]);
+            if(rc == PTP_RC_OK){
+                setupPropertyCounter++;
+            }
+            if(setupPropertyCounter == 5){
+                setupPropertyCounter = 0;
+                cameraSetupComplete = true;
+                currentCameraEvent = EVT_BT_NOTHING;
+            }
+            
         }
-       
-    
-        
     }
+
 }
-
-
 
 void setup()
 {
@@ -222,7 +238,7 @@ void setup()
     lastDebugTime = timeNow;
     lastBatteryUpdateTime = timeNow;
     lastTimeTimeLeftWasUpdated = timeNow;
-    lastTimeBTPropertyChanged = timeNow - 20000;
+    lastTimeBTPropertyChanged = timeNow;
     
     buttonPressedTime = 0;
     wasHigh = false;
@@ -232,11 +248,11 @@ void setup()
     lastPictureNr = 0;
     
     //Statndard väden som panoramainställningar
-        shutterSpeedValue = 399;
-        panoramaSettings.setPlusMinusEv(1);
+        shutterSpeedValue = 386;
+        panoramaSettings.setPlusMinusEv(3);
         panoramaSettings.setMiddShutterSpeed(shutterSpeedValue);
 
-
+    cameraSetupComplete = false;
     cameraConnected = false;
     display.setRefreshRate(800);
     
@@ -300,6 +316,7 @@ void loop()
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
         case PGM_READY:
+
             analogWrite(statusLedRGB[1], 15);
             analogWrite(statusLedRGB[0], 0);
             if(currentTime > (lastTimeBTPropertyChanged + BT_SHOW_INFO_SCREEN_DELAY)){
@@ -309,6 +326,8 @@ void loop()
             Usb.Task();
             if(!cameraConnected){
                 currentState = PGM_SETUP;
+            }else if(!cameraSetupComplete){
+                currentCameraEvent = EVT_SETUP_CAMERA_SETTINGS; 
             }
 
 
@@ -364,7 +383,7 @@ void loop()
                 case EVT_NEW:
                     //CALC CAMERA CORDINATES - NR OF PICTURES
                     // INIIT EVERTHING FOR NEW PROCESS
-
+                    currentCameraEvent = EVT_BT_NOTHING;
                     timeLeftOfProcess = 4000;
                     currentPictureNr = 1;
                     pictureNrInCurrentHDR = 1;
@@ -489,26 +508,33 @@ void loop()
 ////////////////////////////////////////////////////////////
         }
 
+
             //CHECK BLUETOOTH
             if(bluetooth.newDataToRead()){
                 bluetooth.handleAction();
-                if(bluetooth.updateShutterVariable()  || currentState == PGM_READY){
-                    display.propertyChangedScreen(batteryPercentage,"Middle shutterspeed changed");
+
+                if(bluetooth.updateShutterVariable()  && currentState == PGM_READY){
+                    display.propertyChangedScreen(batteryPercentage,"SS CHANGED");
                     lastTimeBTPropertyChanged = currentTime;
                     panoramaSettings.setMiddShutterSpeed(bluetooth.readPropertyValue());
                     bluetooth.updated();
-                }else if(bluetooth.updateEvVariable()|| currentState == PGM_READY){
-                    display.propertyChangedScreen(batteryPercentage,"EV changed");
+                }else if(bluetooth.updateEvVariable() && currentState == PGM_READY){
+                    display.propertyChangedScreen(batteryPercentage,"EV CHANGED");
                     lastTimeBTPropertyChanged = currentTime;
                     panoramaSettings.setPlusMinusEv(bluetooth.readPropertyValue());
                     bluetooth.updated();
-                }else if(bluetooth.updateCameraSetting()|| currentState == PGM_READY){
+                }else if(bluetooth.updateFocalLength() && currentState == PGM_READY){
+                    display.propertyChangedScreen(batteryPercentage,"FL CHANGED");
+                    lastTimeBTPropertyChanged = currentTime;
+                    panoramaSettings.setFocalLength(bluetooth.readPropertyValue());
+                    bluetooth.updated();
+                }else if(bluetooth.updateCameraSetting() && currentState == PGM_READY){
                     display.propertyChangedScreen(batteryPercentage,"Property changed");
                     lastTimeBTPropertyChanged = currentTime;
                     currentCameraEvent = EVT_BT_CHANGE_PROP;
                     cameraPropertyName = bluetooth.readPropertyName();
                     cameraPropertyValue = bluetooth.readPropertyValue();
-                }else if(bluetooth.shouldTakePicture()|| currentState == PGM_READY){
+                }else if(bluetooth.shouldTakePicture() && currentState == PGM_READY){
                     currentCameraEvent = EVT_BT_TAKE_PHOTO;
                 }else if(bluetooth.startStopProgram()){
                     if(currentState == PGM_RUNNING){
@@ -519,7 +545,59 @@ void loop()
                         currentState = PGM_RESUMED; 
                     }
                     bluetooth.updated();
+                }else if(bluetooth.moveCameraUp() && currentState == PGM_READY){
+                    currentCameraEvent = EVT_BT_RUN_MOTORS;
+                    btMotorDirection = 1;
+                }else if(bluetooth.moveCameraDown() && currentState == PGM_READY){
+                    currentCameraEvent = EVT_BT_RUN_MOTORS;
+                    btMotorDirection = 2;
+                }else if(bluetooth.moveCameraLeft() && currentState == PGM_READY){
+                    currentCameraEvent = EVT_BT_RUN_MOTORS;
+                    btMotorDirection = 3;
+                }else if(bluetooth.moveCameraRight() && currentState == PGM_READY){
+                    currentCameraEvent = EVT_BT_RUN_MOTORS;
+                    btMotorDirection = 4;
+                }else if(bluetooth.moveCameraHome() && currentState == PGM_READY){
+                        currentCameraEvent = EVT_BT_RUN_MOTORS;
+                        btMotorDirection = -1;   
+                }else if(bluetooth.moveCameraStop() && currentState == PGM_READY){
+                        currentCameraEvent = EVT_BT_RUN_MOTORS;
+                        btMotorDirection = 0;   
                 }
                 delay(1);
             }
+        ///MANUAL CONTROL OF MOTORS
+        if(currentCameraEvent == EVT_BT_RUN_MOTORS){
+            switch(btMotorDirection){
+                case -1:
+                    camera.move(0, 90);
+                    if(camera.inPosition()){
+                        currentCameraEvent = EVT_BT_NOTHING;
+                    }
+                break;
+                case 0:
+                    camera.stop();
+                    bluetooth.updated();
+                    currentCameraEvent = EVT_BT_NOTHING;
+                break;
+                case 1:
+                //UP
+                    camera.runUp();
+                break;
+
+                case 2:
+                //Down
+                    camera.runDown();
+                break;
+                case 3:
+                //Left
+                    camera.runLeft();
+                break;
+                case 4:
+                //RIGHT
+                    camera.runRight();
+                break;
+
+            }
+        }
 }

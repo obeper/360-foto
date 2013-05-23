@@ -30,7 +30,6 @@ void MainDisplay::readyScreen(int batteryStatus){
 	_lastScreenUpdate = millis();
 }
 void MainDisplay::propertyChangedScreen(int batteryStatus, String property){
-	if(!this->shouldRefresh())return;
 	this->clear();
 	this->printLeftUp("Ready");
 	this->printRigthUp((String)batteryStatus + "%");

@@ -14,13 +14,41 @@ void RotateCamera::move(float panCordinate, float tiltCordinate){
 bool RotateCamera::inPosition(){
 	return (_tiltInPosition && _panInPosition);
 }
+
+void RotateCamera::stop(){
+	_stepperTilt.stop();
+	_stepperPan.stop();
+}
+void RotateCamera::runUp(){
+	float tiltDeg = _sensorTilt.readDeg();
+	if(tiltDeg > 270 && tiltDeg < 90){
+		_stepperTilt.setSpeed(_speed); 
+		_stepperTilt.runSpeed();
+	} 
+}
+void RotateCamera::runDown(){
+	float tiltDeg = _sensorTilt.readDeg();
+	if(tiltDeg > 270 && tiltDeg < 90){
+		_stepperTilt.setSpeed(-1*_speed); 
+		_stepperTilt.runSpeed();
+	}
+}
+void RotateCamera::runLeft(){
+	_stepperPan.setSpeed(-1*_speed); 
+	_stepperPan.runSpeed(); 
+}
+void RotateCamera::runRight(){
+	_stepperPan.setSpeed(_speed); 
+	_stepperPan.runSpeed(); 
+}
+
 //Private
 void RotateCamera::pan(float cordinate){
 	//Calc degs to move
 	static long lastPanSensorReadTime = 0;
 	long currentTime = millis();
 
-	if(currentTime > lastPanSensorReadTime + 1){
+	if(currentTime >= lastPanSensorReadTime + 1){
 		_currentPanCordinate = (float)_sensorPan.readDeg();
 		lastPanSensorReadTime = currentTime;
 	}
@@ -30,6 +58,7 @@ void RotateCamera::pan(float cordinate){
 	_panInPosition = (abs(cordinate - _currentPanCordinate) < _satAngle) ? true : false;
 	//Move camera
 	if(!_panInPosition){
+
 		float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
 		_stepperPan.move(steppsToMove);
 		_stepperPan.setSpeed(_speed);
@@ -40,12 +69,15 @@ void RotateCamera::pan(float cordinate){
 void RotateCamera::tilt(float cordinate){
 	//Calc degs to move
 
-	static long lastTiltSensorReadTime = 0;
-	long currentTime = millis();
-
-	if(currentTime > lastTiltSensorReadTime + 1){
-		_currentPanCordinate = (float)_sensorPan.readDeg();
+		_currentPanCordinate = (float)_sensorTilt.readDeg();
 		lastTiltSensorReadTime = currentTime;
+
+	if(cordinate < 0 ){
+		cordinate += 360;
+	}
+	if(cordinate > 90 || cordinate < 270){
+		_tiltInPosition = true;
+		return;
 	}
 	float degsToMove = this->pathToMove(cordinate, _currentPanCordinate);
 	
@@ -54,8 +86,8 @@ void RotateCamera::tilt(float cordinate){
 	//Move camera
 	if(!_tiltInPosition){
 		float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
-		_stepperPan.move(steppsToMove);
-		_stepperPan.setSpeed(_speed);
+		_stepperTilt.move(steppsToMove);
+		_stepperTilt.setSpeed(_speed);
 	}
 	
 }

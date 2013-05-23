@@ -16,7 +16,7 @@ class RotateCamera
 			_stepperTilt(1,tiltStepperStepPin,tiltStepperDirPin),
 			_stepperPan(1,panStepperStepPin, panStepperDirPin){
 				//BASE SPEED FOR STEPPERMOTORS
-				_speed = 2000;
+				_speed = 6000;
 				//GEAR RATIO BETWEEN MOTOR AND CAMERA MOVEMENT
 				_gearRatio = 50;
 
@@ -29,6 +29,11 @@ class RotateCamera
 
 		bool inPosition();
 		void move(float panCordinate, float tiltCordinate);
+		void stop();
+		void runUp();
+		void runDown();
+		void runLeft();
+		void runRight();
 	private:
 		AngularSensor 		_sensorTilt;
 		AngularSensor 		_sensorPan;

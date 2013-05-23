@@ -51,7 +51,7 @@ PanoramaSettings::PanoramaSettings(float focal, float sensorH, float sensorV, fl
 	_shutterSpeeds[29] = 349;
 	_shutterSpeeds[30] = 351;
 	_shutterSpeeds[31] = 354;
-	_shutterSpeeds[32] = 101;
+	_shutterSpeeds[32] = 356;
 	_shutterSpeeds[33] = 359;
 	_shutterSpeeds[34] = 362;
 	_shutterSpeeds[35] = 364;
