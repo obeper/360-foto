@@ -114,16 +114,17 @@ float PanoramaSettings::calcPanCordinate(int picNr){
 	}	
 } 
 float PanoramaSettings::calcTiltCordinate(int picNr){
-	if(picNr == _totalNrOfPictures - 2.0){
-		return 90.0;
-	}else if(picNr == _totalNrOfPictures - 1.0){
+	if(picNr == 0.0){
 		return -90.0;
+	}else if(picNr == _totalNrOfPictures - 1.0){
+		return 90.0;
 	}
-	float tilt_start = 0.0 - (_verticalAngle - _fovVertical)/2;
-	float tilt_stop = 180.0 - abs(tilt_start);
-	float tilt_middle = tilt_stop - abs(tilt_start);
-	float tilt_spann = abs(tilt_middle);
-	float vertical_step = tilt_spann/_verticalPics;
+	picNr -= 1;
+	float pic_start = (180.0- _verticalAngle)/2.0;
+	float tilt_start = -1.0*(pic_start + _fovVertical/2.0);
+	float tilt_stop = abs(tilt_start);
+	float tilt_spann = abs(tilt_start) + abs(tilt_stop);
+	float vertical_step = tilt_spann/(_verticalPics - 1.0);
 
 	float tilt_row = ((picNr- (picNr % _horizontalPics))/_horizontalPics);
 	return  (tilt_row*vertical_step) + tilt_start;

@@ -20,14 +20,14 @@ void RotateCamera::stop(){
 void RotateCamera::runUp(){
 	float tiltDeg = _sensorTilt.readDeg();
 	//if(tiltDeg > 270 && tiltDeg < 90){
-		_stepperTilt.setSpeed(_speed); 
+		_stepperTilt.setSpeed(_speedTilt); 
 		_stepperTilt.runSpeed();
 	//} 
 }
 void RotateCamera::runDown(){
 	float tiltDeg = _sensorTilt.readDeg();
 	//if(tiltDeg > 270 && tiltDeg < 90){
-		_stepperTilt.setSpeed(-1*_speed); 
+		_stepperTilt.setSpeed(-1*_speedTilt); 
 		_stepperTilt.runSpeed();
 	//}
 }
@@ -81,7 +81,7 @@ void RotateCamera::tilt(float cordinate){
 	if(!_tiltInPosition){
 		float steppsToMove = this->calcSteppsToMove(degsToMove) * _gearRatio;
 		_stepperTilt.move(steppsToMove);
-		_stepperTilt.setSpeed(_speed);
+		_stepperTilt.setSpeed(_speedTilt);
 		_stepperTilt.runSpeedToPosition();
 	}
 	
