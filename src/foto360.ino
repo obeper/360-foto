@@ -64,7 +64,7 @@ ProgramState currentState;
 
 
 //USERINTERFACE PINS
-int startButtonPin;
+int startButtonPin = 2;
 int statusLedRGB[3] = {4,5,3};
 
 //TIMERS
@@ -226,8 +226,6 @@ void setup()
     currentProcessEvent = EVT_NOTHING;
 
 
-
-    startButtonPin = 2;
     pinMode(startButtonPin, INPUT);
     pinMode(statusLedRGB[0], OUTPUT);
     pinMode(statusLedRGB[1], OUTPUT);
